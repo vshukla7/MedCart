@@ -5,23 +5,35 @@ import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrderContext';
 
-export const CheckoutModal = ({ visible, onClose, onSuccessOrder }) => {
+export const CheckoutModal = ({ visible, onClose, onSuccessOrder, currentUser }) => {
   const { theme } = useTheme();
   const { cartItems, grandTotal, subtotal, deliveryCharge, clearCart } = useCart();
   const { placeOrder } = useOrders();
 
-  const [paymentMethod, setPaymentMethod] = useState('UPI');
+  const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery (COD)');
   const [selectedAddress, setSelectedAddress] = useState({
-    name: 'John Doe',
-    phone: '+91 98765 43210',
+    name: currentUser?.name || 'John Doe',
+    phone: currentUser?.phone || '+91 98765 43210',
     address: '123 Healthcare Way, Sector 4, Mumbai, 400001'
   });
   const [isPlacing, setIsPlacing] = useState(false);
+
+  // Keep address synchronized with currentUser if it changes
+  React.useEffect(() => {
+    if (currentUser) {
+      setSelectedAddress(prev => ({
+        ...prev,
+        name: currentUser.name,
+        phone: currentUser.phone
+      }));
+    }
+  }, [currentUser]);
 
   const handlePlaceOrder = async () => {
     setIsPlacing(true);
     try {
       const orderPayload = {
+        userId: currentUser?._id,
         items: cartItems,
         totalAmount: subtotal,
         deliveryCharge: deliveryCharge,
@@ -70,47 +82,18 @@ export const CheckoutModal = ({ visible, onClose, onSuccessOrder }) => {
             {/* Payment Method Section */}
             <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Payment Method</Text>
 
-            <TouchableOpacity
+            <View
               style={[
                 styles.paymentOption,
-                { backgroundColor: theme.inputBg, borderColor: paymentMethod === 'UPI' ? '#22C55E' : 'transparent' }
+                { backgroundColor: theme.inputBg, borderColor: '#22C55E' }
               ]}
-              onPress={() => setPaymentMethod('UPI')}
-            >
-              <View style={styles.payLeft}>
-                <FontAwesome5 name="mobile-alt" size={18} color="#22C55E" />
-                <Text style={[styles.payTitle, { color: theme.textPrimary }]}>UPI (Google Pay, PhonePe, Paytm)</Text>
-              </View>
-              {paymentMethod === 'UPI' && <Ionicons name="checkmark-circle" size={20} color="#22C55E" />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.paymentOption,
-                { backgroundColor: theme.inputBg, borderColor: paymentMethod === 'Credit/Debit Cards' ? '#22C55E' : 'transparent' }
-              ]}
-              onPress={() => setPaymentMethod('Credit/Debit Cards')}
-            >
-              <View style={styles.payLeft}>
-                <FontAwesome5 name="credit-card" size={18} color="#3B82F6" />
-                <Text style={[styles.payTitle, { color: theme.textPrimary }]}>Credit / Debit Cards</Text>
-              </View>
-              {paymentMethod === 'Credit/Debit Cards' && <Ionicons name="checkmark-circle" size={20} color="#22C55E" />}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.paymentOption,
-                { backgroundColor: theme.inputBg, borderColor: paymentMethod === 'Cash on Delivery (COD)' ? '#22C55E' : 'transparent' }
-              ]}
-              onPress={() => setPaymentMethod('Cash on Delivery (COD)')}
             >
               <View style={styles.payLeft}>
                 <FontAwesome5 name="money-bill-wave" size={18} color="#F59E0B" />
                 <Text style={[styles.payTitle, { color: theme.textPrimary }]}>Cash on Delivery (COD)</Text>
               </View>
-              {paymentMethod === 'Cash on Delivery (COD)' && <Ionicons name="checkmark-circle" size={20} color="#22C55E" />}
-            </TouchableOpacity>
+              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+            </View>
 
             {/* Bill Summary */}
             <View style={styles.billBox}>

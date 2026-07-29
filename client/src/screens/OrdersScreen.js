@@ -1,18 +1,37 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { useOrders } from '../context/OrderContext';
+import { fetchOrders } from '../services/api';
 
-export const OrdersScreen = () => {
+export const OrdersScreen = ({ currentUser }) => {
   const { theme } = useTheme();
-  const { orders, advanceOrderStep } = useOrders();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadHistory = async () => {
+    if (!currentUser?._id) return;
+    setLoading(true);
+    try {
+      const history = await fetchOrders({ role: 'user', userId: currentUser._id });
+      setOrders(history || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, [currentUser]);
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Preparing': return '#F59E0B';
-      case 'Packed': return '#3B82F6';
-      case 'Out for Delivery': return '#8B5CF6';
+      case 'Pending': return '#F59E0B';
+      case 'Confirmed': return '#3B82F6';
+      case 'Packed': return '#8B5CF6';
+      case 'Out for Delivery': return '#EC4899';
       case 'Delivered': return '#16A34A';
       default: return '#6B7280';
     }
@@ -21,9 +40,18 @@ export const OrdersScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.textPrimary }]}>My Orders History</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Track and manage your pharmacy orders</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={[styles.title, { color: theme.textPrimary }]}>My Orders History</Text>
+            <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Track and manage your pharmacy orders</Text>
+          </View>
+          <TouchableOpacity onPress={loadHistory} style={styles.refreshBtn}>
+            <Feather name="refresh-cw" size={16} color="#22C55E" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {loading && <ActivityIndicator size="large" color="#22C55E" style={{ marginVertical: 20 }} />}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {orders.map(ord => (
@@ -61,17 +89,22 @@ export const OrdersScreen = () => {
                 <Text style={styles.totalAmount}>₹{ord.grandTotal || ord.totalAmount}</Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.advanceBtn}
-                onPress={() => advanceOrderStep(ord._id)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.advanceBtnText}>Update Stage</Text>
-                <Feather name="refresh-cw" size={12} color="#FFFFFF" />
-              </TouchableOpacity>
+              <View style={styles.paymentInfo}>
+                <Text style={[styles.payMethodText, { color: theme.textSecondary }]}>{ord.paymentMethod}</Text>
+                <Text style={[styles.payStatusText, { color: ord.isPaid ? '#16A34A' : '#EF4444' }]}>
+                  {ord.isPaid ? 'Paid' : 'Cash Pending'}
+                </Text>
+              </View>
             </View>
           </View>
         ))}
+
+        {!loading && orders.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Feather name="package" size={48} color={theme.textSecondary} />
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No orders placed yet.</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -160,18 +193,30 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#22C55E'
   },
-  advanceBtn: {
-    backgroundColor: '#22C55E',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    gap: 6
+  refreshBtn: {
+    padding: 6
   },
-  advanceBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700'
+  paymentInfo: {
+    alignItems: 'flex-end',
+    gap: 2
+  },
+  payMethodText: {
+    fontSize: 10,
+    fontWeight: '800'
+  },
+  payStatusText: {
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    gap: 10
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center'
   }
 });

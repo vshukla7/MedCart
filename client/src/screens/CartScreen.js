@@ -79,11 +79,11 @@ export const CartScreen = ({ onProceedCheckout, onBrowseMedicines }) => {
           </View>
         ))}
 
-        {/* Free Delivery Promo */}
+        {/* Delivery Promo */}
         <View style={styles.freeDelBanner}>
           <Ionicons name="car-outline" size={20} color="#16A34A" />
           <Text style={styles.freeDelText}>
-            {deliveryCharge === 0 ? '🎉 You qualify for FREE Delivery!' : `Add ₹${500 - subtotal} more for FREE Delivery`}
+            🎉 Flat ₹20 Cash on Delivery charge applied
           </Text>
         </View>
 

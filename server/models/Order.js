@@ -10,16 +10,19 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   items: [orderItemSchema],
   totalAmount: { type: Number, required: true },
-  deliveryCharge: { type: Number, default: 0 },
+  deliveryCharge: { type: Number, default: 20 },
   grandTotal: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['Preparing', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'], 
-    default: 'Preparing' 
+    enum: ['Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'], 
+    default: 'Pending' 
   },
-  statusStep: { type: Number, default: 1 }, // 1: Preparing, 2: Packed, 3: Out for Delivery, 4: Delivered
+  statusStep: { type: Number, default: 1 }, // 1: Pending, 2: Confirmed, 3: Packed, 4: Out for Delivery, 5: Delivered
   shippingAddress: {
     fullName: { type: String, default: 'John Doe' },
     phone: { type: String, default: '+91 98765 43210' },
@@ -27,8 +30,8 @@ const orderSchema = new mongoose.Schema({
     city: { type: String, default: 'Mumbai' },
     pincode: { type: String, default: '400001' }
   },
-  paymentMethod: { type: String, enum: ['UPI', 'Credit/Debit Cards', 'Cash on Delivery (COD)'], default: 'UPI' },
-  isPaid: { type: Boolean, default: true },
+  paymentMethod: { type: String, enum: ['Cash on Delivery (COD)'], default: 'Cash on Delivery (COD)' },
+  isPaid: { type: Boolean, default: false },
   estimatedDelivery: { type: String, default: 'Today, by 6:00 PM' }
 }, { timestamps: true });
 

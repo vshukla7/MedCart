@@ -142,9 +142,9 @@ export const fetchMedicines = async (params = {}) => {
   return list;
 };
 
-export const fetchLatestOrder = async () => {
+export const fetchLatestOrder = async (userId) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders/latest`);
+    const res = await fetch(`${API_BASE_URL}/orders/latest?userId=${userId || ''}`);
     const json = await res.json();
     if (json.success && json.data) return json.data;
   } catch (e) {
@@ -159,6 +159,18 @@ export const fetchLatestOrder = async () => {
     statusStep: 3,
     estimatedDelivery: 'Today, by 6:00 PM'
   };
+};
+
+export const fetchOrders = async (params = {}) => {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE_URL}/orders?${query}`);
+    const json = await res.json();
+    if (json.success && json.data) return json.data;
+  } catch (e) {
+    console.log('[API Offline] Error fetching orders');
+  }
+  return [];
 };
 
 export const createOrder = async (orderData) => {
@@ -177,9 +189,90 @@ export const createOrder = async (orderData) => {
     _id: 'ord_' + Date.now(),
     orderNumber: 'MED-' + Math.floor(100000 + Math.random() * 900000),
     ...orderData,
-    status: 'Preparing',
+    status: 'Pending',
     statusStep: 1,
     createdAt: new Date().toISOString()
+  };
+};
+
+export const confirmOrder = async (orderId, confirmedBy) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/${orderId}/confirm`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmedBy })
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    console.log('[API Offline] Error confirming order');
+    return { success: false };
+  }
+};
+
+export const assignOrder = async (orderId, staffId) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/${orderId}/assign`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staffId })
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    console.log('[API Offline] Error assigning order');
+    return { success: false };
+  }
+};
+
+export const updateOrderStatus = async (orderId, status) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    console.log('[API Offline] Error updating status');
+    return { success: false };
+  }
+};
+
+export const fetchSalesAnalytics = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/sales-analytics`);
+    const json = await res.json();
+    if (json.success && json.data) return json.data;
+  } catch (e) {
+    console.log('[API Offline] Error fetching analytics');
+  }
+  return {
+    analytics: {
+      totalRevenue: 9850,
+      todayRevenue: 1200,
+      weeklyRevenue: 4500,
+      monthlyRevenue: 9850,
+      totalOrders: 20,
+      deliveredOrders: 18,
+      pendingOrders: 2,
+      cancelledOrders: 0
+    },
+    staffPerformance: [
+      {
+        _id: 'u_admin',
+        name: 'Admin User',
+        phone: '+91 99999 99999',
+        role: 'admin',
+        ordersDelivered: 18,
+        totalSales: 9850,
+        avgOrderValue: 547,
+        pending: 2,
+        cancelled: 0,
+        successRate: 90
+      }
+    ]
   };
 };
 

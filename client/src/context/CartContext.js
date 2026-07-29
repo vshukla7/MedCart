@@ -46,7 +46,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = () => setCartItems([]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryCharge = subtotal > 500 || subtotal === 0 ? 0 : 40;
+  const deliveryCharge = subtotal === 0 ? 0 : 20;
   const grandTotal = subtotal + deliveryCharge;
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 

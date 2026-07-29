@@ -228,21 +228,46 @@ router.get('/medicines/:id', async (req, res) => {
 
 // Orders API
 router.get('/orders', async (req, res) => {
+  const { userId, role, assignedTo } = req.query;
+
   try {
     if (Order.db && Order.db.readyState === 1) {
-      const orders = await Order.find({}).sort({ createdAt: -1 });
-      if (orders && orders.length > 0) {
-        return res.json({ success: true, count: orders.length, data: orders });
+      let query = {};
+      if (role === 'user' && userId) {
+        query.userId = userId;
+      } else if (role === 'staff' && userId) {
+        query.assignedTo = userId;
+      } else if (assignedTo) {
+        query.assignedTo = assignedTo;
       }
+      
+      const orders = await Order.find(query)
+        .populate('userId', 'phone name role')
+        .populate('assignedTo', 'phone name role')
+        .sort({ createdAt: -1 });
+      return res.json({ success: true, count: orders.length, data: orders });
     }
-  } catch (err) {}
-  res.json({ success: true, count: inMemOrders.length, data: inMemOrders });
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Fallback
+  let list = [...inMemOrders];
+  if (role === 'user' && userId) {
+    list = list.filter(o => o.userId === userId);
+  } else if (role === 'staff' && userId) {
+    list = list.filter(o => o.assignedTo === userId);
+  }
+  res.json({ success: true, count: list.length, data: list });
 });
 
 router.get('/orders/latest', async (req, res) => {
+  const { userId } = req.query;
   try {
     if (Order.db && Order.db.readyState === 1) {
-      const latest = await Order.findOne({ status: { $ne: 'Cancelled' } }).sort({ createdAt: -1 });
+      let query = {};
+      if (userId) query.userId = userId;
+      const latest = await Order.findOne(query).sort({ createdAt: -1 });
       if (latest) return res.json({ success: true, data: latest });
     }
   } catch (err) {}
@@ -250,17 +275,25 @@ router.get('/orders/latest', async (req, res) => {
 });
 
 router.post('/orders', async (req, res) => {
-  const { items, totalAmount, deliveryCharge, grandTotal, paymentMethod, shippingAddress } = req.body;
+  const { userId, items, totalAmount, shippingAddress } = req.body;
+  if (!items || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Cart items are required' });
+  }
+
+  const deliveryCharge = 20;
+  const grandTotal = (totalAmount || 0) + deliveryCharge;
+
   const newOrderObj = {
-    _id: 'ord_' + Date.now(),
     orderNumber: 'MED-' + Math.floor(100000 + Math.random() * 900000),
-    items: items || [],
+    userId: userId || null,
+    items: items,
     totalAmount: totalAmount || 0,
-    deliveryCharge: deliveryCharge || 0,
-    grandTotal: grandTotal || totalAmount || 0,
-    status: 'Preparing',
+    deliveryCharge: deliveryCharge,
+    grandTotal: grandTotal,
+    status: 'Pending',
     statusStep: 1,
-    paymentMethod: paymentMethod || 'UPI',
+    paymentMethod: 'Cash on Delivery (COD)',
+    isPaid: false,
     shippingAddress: shippingAddress || { fullName: 'John Doe', phone: '+91 98765 43210' },
     createdAt: new Date().toISOString()
   };
@@ -271,34 +304,219 @@ router.post('/orders', async (req, res) => {
       await newOrder.save();
       return res.status(201).json({ success: true, message: 'Order placed successfully', data: newOrder });
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error(err);
+  }
 
-  inMemOrders.unshift(newOrderObj);
-  res.status(201).json({ success: true, message: 'Order placed successfully', data: newOrderObj });
+  // Fallback
+  const fallbackOrder = { _id: 'ord_' + Date.now(), ...newOrderObj };
+  inMemOrders.unshift(fallbackOrder);
+  res.status(201).json({ success: true, message: 'Order placed successfully', data: fallbackOrder });
 });
 
-router.put('/orders/:id/step', async (req, res) => {
-  const { step } = req.body;
-  const stepsMap = { 1: 'Preparing', 2: 'Packed', 3: 'Out for Delivery', 4: 'Delivered' };
+// Admin/Staff: Confirm Order
+router.put('/orders/:id/confirm', async (req, res) => {
+  const { confirmedBy } = req.body;
+  try {
+    if (Order.db && Order.db.readyState === 1) {
+      const order = await Order.findById(req.params.id);
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+      order.status = 'Confirmed';
+      order.statusStep = 2;
+      order.confirmedBy = confirmedBy;
+      await order.save();
+      return res.json({ success: true, message: 'Order confirmed successfully', data: order });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  
+  // Fallback
+  const order = inMemOrders.find(o => o._id === req.params.id);
+  if (order) {
+    order.status = 'Confirmed';
+    order.statusStep = 2;
+    order.confirmedBy = confirmedBy;
+  }
+  res.json({ success: true, data: order });
+});
+
+// Admin: Assign Order to Staff
+router.put('/orders/:id/assign', async (req, res) => {
+  const { staffId } = req.body;
+  try {
+    if (Order.db && Order.db.readyState === 1) {
+      const order = await Order.findById(req.params.id);
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+      order.assignedTo = staffId;
+      await order.save();
+      return res.json({ success: true, message: 'Order assigned to staff successfully', data: order });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Fallback
+  const order = inMemOrders.find(o => o._id === req.params.id);
+  if (order) {
+    order.assignedTo = staffId;
+  }
+  res.json({ success: true, data: order });
+});
+
+// Update Order Status Step
+router.put('/orders/:id/status', async (req, res) => {
+  const { status } = req.body;
+  const statusMap = {
+    'Pending': 1,
+    'Confirmed': 2,
+    'Packed': 3,
+    'Out for Delivery': 4,
+    'Delivered': 5,
+    'Cancelled': 0
+  };
+
+  const step = statusMap[status] || 1;
 
   try {
     if (Order.db && Order.db.readyState === 1) {
       const order = await Order.findById(req.params.id);
       if (order) {
+        order.status = status;
         order.statusStep = step;
-        order.status = stepsMap[step] || 'Preparing';
+        if (status === 'Delivered') {
+          order.isPaid = true;
+        }
         await order.save();
         return res.json({ success: true, message: 'Order status updated', data: order });
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error(err);
+  }
 
   const target = inMemOrders.find(o => o._id === req.params.id);
   if (target) {
+    target.status = status;
     target.statusStep = step;
-    target.status = stepsMap[step] || 'Preparing';
+    if (status === 'Delivered') {
+      target.isPaid = true;
+    }
   }
-  res.json({ success: true, message: 'Order status updated', data: target || inMemOrders[0] });
+  res.json({ success: true, message: 'Order status updated', data: target });
+});
+
+// Admin: Sales and Analytics
+router.get('/admin/sales-analytics', async (req, res) => {
+  try {
+    if (Order.db && Order.db.readyState === 1) {
+      const orders = await Order.find({}).populate('assignedTo', 'name phone role');
+      const staffList = await User.find({ role: { $in: ['staff', 'admin'] } }).select('name phone role');
+
+      // Calculate Revenue stats
+      let totalRevenue = 0;
+      let todayRevenue = 0;
+      let weeklyRevenue = 0;
+      let monthlyRevenue = 0;
+
+      let totalOrders = orders.length;
+      let deliveredOrders = 0;
+      let pendingOrders = 0;
+      let cancelledOrders = 0;
+
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      orders.forEach(o => {
+        const oDate = new Date(o.createdAt);
+        if (o.status === 'Delivered') {
+          deliveredOrders++;
+          totalRevenue += o.grandTotal;
+          if (oDate >= startOfToday) todayRevenue += o.grandTotal;
+          if (oDate >= startOfWeek) weeklyRevenue += o.grandTotal;
+          if (oDate >= startOfMonth) monthlyRevenue += o.grandTotal;
+        } else if (o.status === 'Cancelled') {
+          cancelledOrders++;
+        } else {
+          pendingOrders++;
+        }
+      });
+
+      // Calculate Staff Performance
+      const staffStats = staffList.map(staff => {
+        const staffOrders = orders.filter(o => o.assignedTo && o.assignedTo._id.toString() === staff._id.toString());
+        const delivered = staffOrders.filter(o => o.status === 'Delivered');
+        const pending = staffOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
+        const cancelled = staffOrders.filter(o => o.status === 'Cancelled');
+        const sales = delivered.reduce((sum, o) => sum + o.grandTotal, 0);
+
+        return {
+          _id: staff._id,
+          name: staff.name,
+          phone: staff.phone,
+          role: staff.role,
+          ordersDelivered: delivered.length,
+          totalSales: sales,
+          avgOrderValue: delivered.length > 0 ? Math.round(sales / delivered.length) : 0,
+          pending: pending.length,
+          cancelled: cancelled.length,
+          successRate: staffOrders.length > 0 ? Math.round((delivered.length / staffOrders.length) * 100) : 0
+        };
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          analytics: {
+            totalRevenue,
+            todayRevenue,
+            weeklyRevenue,
+            monthlyRevenue,
+            totalOrders,
+            deliveredOrders,
+            pendingOrders,
+            cancelledOrders
+          },
+          staffPerformance: staffStats
+        }
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Fallback
+  res.json({
+    success: true,
+    data: {
+      analytics: {
+        totalRevenue: 9850,
+        todayRevenue: 1200,
+        weeklyRevenue: 4500,
+        monthlyRevenue: 9850,
+        totalOrders: 20,
+        deliveredOrders: 18,
+        pendingOrders: 2,
+        cancelledOrders: 0
+      },
+      staffPerformance: [
+        {
+          _id: 'u_admin',
+          name: 'Admin User',
+          phone: '+91 99999 99999',
+          role: 'admin',
+          ordersDelivered: 18,
+          totalSales: 9850,
+          avgOrderValue: 547,
+          pending: 2,
+          cancelled: 0,
+          successRate: 90
+        }
+      ]
+    }
+  });
 });
 
 // Reminders API

@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { Ionicons, Feather, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { ManageRolesModal } from '../components/ManageRolesModal';
 
 export const ProfileScreen = ({ 
   onOpenReminders, 
   onOpenChat, 
   onOpenOrders,
   currentUser,
-  onLogout
+  onLogout,
+  onOpenAdminDashboard,
+  onOpenStaffDashboard
 }) => {
   const { theme, isDarkMode, toggleTheme } = useTheme();
-  const [showManageRoles, setShowManageRoles] = useState(false);
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -51,18 +51,35 @@ export const ProfileScreen = ({
         {/* Settings & Controls */}
         <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Preferences & Settings</Text>
 
-        {/* Admin Manage Roles Option */}
+        {/* Admin Dashboard */}
         {displayRole === 'admin' && (
           <TouchableOpacity 
             style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
-            onPress={() => setShowManageRoles(true)}
+            onPress={onOpenAdminDashboard}
             activeOpacity={0.8}
           >
             <View style={styles.menuLeft}>
               <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
                 <Feather name="shield" size={18} color="#EF4444" />
               </View>
-              <Text style={[styles.menuText, { color: theme.textPrimary }]}>Manage User Roles</Text>
+              <Text style={[styles.menuText, { color: theme.textPrimary }]}>Admin Dashboard</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={theme.textSecondary} />
+          </TouchableOpacity>
+        )}
+
+        {/* Staff Dashboard */}
+        {(displayRole === 'staff' || displayRole === 'admin') && (
+          <TouchableOpacity 
+            style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={onOpenStaffDashboard}
+            activeOpacity={0.8}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.iconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Feather name="truck" size={18} color="#D97706" />
+              </View>
+              <Text style={[styles.menuText, { color: theme.textPrimary }]}>Staff Dashboard</Text>
             </View>
             <Feather name="chevron-right" size={18} color={theme.textSecondary} />
           </TouchableOpacity>
@@ -128,20 +145,6 @@ export const ProfileScreen = ({
           <Feather name="chevron-right" size={18} color={theme.textSecondary} />
         </View>
 
-        {/* Payment Methods */}
-        <View style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <View style={styles.menuLeft}>
-            <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
-              <Ionicons name="card-outline" size={18} color="#DC2626" />
-            </View>
-            <View>
-              <Text style={[styles.menuText, { color: theme.textPrimary }]}>Payment Methods</Text>
-              <Text style={[styles.subText, { color: theme.textSecondary }]}>UPI (Google Pay, PhonePe), Cards, COD</Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={18} color={theme.textSecondary} />
-        </View>
-
         {/* Chat with Pharmacist */}
         <TouchableOpacity 
           style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
@@ -163,9 +166,6 @@ export const ProfileScreen = ({
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Manage User Roles Modal */}
-      <ManageRolesModal visible={showManageRoles} onClose={() => setShowManageRoles(false)} />
     </View>
   );
 };

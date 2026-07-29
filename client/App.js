@@ -14,6 +14,8 @@ import { MedicineDetailsModal } from './src/screens/MedicineDetailsModal';
 import { CheckoutModal } from './src/screens/CheckoutModal';
 import { RefillRemindersScreen } from './src/screens/RefillRemindersScreen';
 import { PharmacistChatScreen } from './src/screens/PharmacistChatScreen';
+import { AdminDashboardModal } from './src/components/AdminDashboardModal';
+import { StaffDashboardModal } from './src/components/StaffDashboardModal';
 
 function MainApp() {
   const { theme, isDarkMode } = useTheme();
@@ -26,6 +28,8 @@ function MainApp() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showStaffDashboard, setShowStaffDashboard] = useState(false);
 
   const handleSelectCategory = (slug) => {
     setSelectedCategory(slug);
@@ -66,7 +70,7 @@ function MainApp() {
           />
         );
       case 'orders':
-        return <OrdersScreen />;
+        return <OrdersScreen currentUser={currentUser} />;
       case 'profile':
         return (
           <ProfileScreen
@@ -75,6 +79,8 @@ function MainApp() {
             onOpenReminders={() => setShowReminders(true)}
             onOpenChat={() => setShowChat(true)}
             onOpenOrders={() => setActiveTab('orders')}
+            onOpenAdminDashboard={() => setShowAdminDashboard(true)}
+            onOpenStaffDashboard={() => setShowStaffDashboard(true)}
           />
         );
       default:
@@ -109,6 +115,7 @@ function MainApp() {
       {/* Checkout Modal */}
       <CheckoutModal
         visible={showCheckout}
+        currentUser={currentUser}
         onClose={() => setShowCheckout(false)}
         onSuccessOrder={handleSuccessOrder}
       />
@@ -123,6 +130,20 @@ function MainApp() {
       <PharmacistChatScreen
         visible={showChat}
         onClose={() => setShowChat(false)}
+      />
+
+      {/* Admin Dashboard Modal */}
+      <AdminDashboardModal
+        visible={showAdminDashboard}
+        currentUser={currentUser}
+        onClose={() => setShowAdminDashboard(false)}
+      />
+
+      {/* Staff Dashboard Modal */}
+      <StaffDashboardModal
+        visible={showStaffDashboard}
+        currentUser={currentUser}
+        onClose={() => setShowStaffDashboard(false)}
       />
     </SafeAreaView>
   );
