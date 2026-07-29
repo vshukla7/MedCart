@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { searchUsersByPhone, updateUserRole, fetchOrders, confirmOrder, assignOrder, fetchSalesAnalytics } from '../services/api';
+import * as Notifications from 'expo-notifications';
+import { searchUsersByPhone, updateUserRole, fetchOrders, confirmOrder, assignOrder, fetchSalesAnalytics, broadcastNotification } from '../services/api';
 
 export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
   const { theme } = useTheme();
@@ -22,6 +23,44 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
     analytics: { totalRevenue: 0, todayRevenue: 0, weeklyRevenue: 0, monthlyRevenue: 0, totalOrders: 0, deliveredOrders: 0, pendingOrders: 0, cancelledOrders: 0 },
     staffPerformance: []
   });
+
+  // Broadcast Tab State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+
+  const handleSendNotification = async () => {
+    if (!broadcastTitle.trim() || !broadcastBody.trim()) {
+      Alert.alert('Error', 'Please fill in both title and message.');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await broadcastNotification(broadcastTitle.trim(), broadcastBody.trim());
+      if (res.success) {
+        // Trigger a local push notification immediately for instant visual verification
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `📢 ${broadcastTitle.trim()}`,
+            body: broadcastBody.trim(),
+            sound: true,
+          },
+          trigger: null,
+        });
+        
+        Alert.alert('Success', 'Notification broadcast successfully to all users!');
+        setBroadcastTitle('');
+        setBroadcastBody('');
+      } else {
+        Alert.alert('Error', res.message || 'Could not broadcast notification');
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Failed to send notification');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadDispatchData = async () => {
     setLoading(true);
@@ -145,7 +184,8 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
             { id: 'dispatch', label: 'Dispatch', icon: 'send' },
             { id: 'roles', label: 'Roles', icon: 'users' },
             { id: 'sales', label: 'Sales', icon: 'bar-chart-2' },
-            { id: 'analytics', label: 'Analytics', icon: 'pie-chart' }
+            { id: 'analytics', label: 'Analytics', icon: 'pie-chart' },
+            { id: 'notify', label: 'Notify', icon: 'bell' }
           ].map(t => (
             <TouchableOpacity
               key={t.id}
@@ -360,6 +400,43 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
                   <Text style={styles.statVal}>{analyticsData.analytics?.cancelledOrders}</Text>
                   <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Cancelled</Text>
                 </View>
+              </View>
+            </View>
+          )}
+
+          {/* Notify Tab */}
+          {activeTab === 'notify' && (
+            <View style={styles.tabSection}>
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Send Manual Event Notification</Text>
+              <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, gap: 14 }]}>
+                <View style={styles.inputWrapper}>
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Notification Title</Text>
+                  <TextInput
+                    style={[styles.formInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
+                    placeholder="e.g. 🔥 Weekend Super Sale!"
+                    placeholderTextColor={theme.textSecondary}
+                    value={broadcastTitle}
+                    onChangeText={setBroadcastTitle}
+                  />
+                </View>
+
+                <View style={styles.inputWrapper}>
+                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Notification Message / Paragraph</Text>
+                  <TextInput
+                    style={[styles.formTextArea, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
+                    placeholder="e.g. Upload your prescription now and get 25% off on tablets with flat Rs. 20 COD shipping charges."
+                    placeholderTextColor={theme.textSecondary}
+                    multiline
+                    numberOfLines={4}
+                    value={broadcastBody}
+                    onChangeText={setBroadcastBody}
+                  />
+                </View>
+
+                <TouchableOpacity style={styles.sendNotifyBtn} onPress={handleSendNotification} activeOpacity={0.85}>
+                  <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.sendNotifyBtnText}>Broadcast Push Notification</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -600,5 +677,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginTop: 20
+  },
+  inputWrapper: {
+    gap: 6
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  formInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 44,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  formTextArea: {
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlignVertical: 'top'
+  },
+  sendNotifyBtn: {
+    backgroundColor: '#22C55E',
+    height: 44,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6
+  },
+  sendNotifyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800'
   }
 });

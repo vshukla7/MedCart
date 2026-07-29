@@ -1,39 +1,20 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { fetchLatestOrder, createOrder as apiCreateOrder } from '../services/api';
+import { fetchLatestOrder, createOrder as apiCreateOrder, fetchOrders } from '../services/api';
 
 const OrderContext = createContext();
 
 export const OrderProvider = ({ children }) => {
-  const [orders, setOrders] = useState([
-    {
-      _id: 'ord_101',
-      orderNumber: 'MED-784920',
-      createdAt: new Date().toISOString(),
-      items: [
-        { name: 'Paracetamol 650mg Extra', quantity: 2, price: 45 },
-        { name: 'Vitamin C 1000mg', quantity: 1, price: 95 }
-      ],
-      totalAmount: 185,
-      grandTotal: 185,
-      status: 'Out for Delivery',
-      statusStep: 3,
-      paymentMethod: 'UPI',
-      estimatedDelivery: 'Today, by 6:00 PM'
-    }
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [activeOrder, setActiveOrder] = useState(null);
 
-  const [activeOrder, setActiveOrder] = useState(orders[0]);
-
-  const loadLatestOrder = async () => {
-    const latest = await fetchLatestOrder();
-    if (latest) {
-      setActiveOrder(latest);
+  const loadUserOrders = async (userId, role = 'user') => {
+    if (!userId) return;
+    const history = await fetchOrders({ role, userId });
+    setOrders(history || []);
+    if (history && history.length > 0) {
+      setActiveOrder(history[0]);
     }
   };
-
-  useEffect(() => {
-    loadLatestOrder();
-  }, []);
 
   const placeOrder = async (orderPayload) => {
     const newOrd = await apiCreateOrder(orderPayload);
@@ -62,8 +43,9 @@ export const OrderProvider = ({ children }) => {
       orders,
       activeOrder,
       placeOrder,
-      advanceOrderStep,
-      refreshOrders: loadLatestOrder
+      loadUserOrders,
+      setOrders,
+      advanceOrderStep
     }}>
       {children}
     </OrderContext.Provider>

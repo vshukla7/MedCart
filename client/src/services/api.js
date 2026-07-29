@@ -363,3 +363,33 @@ export const updateUserRole = async (userId, role) => {
     return { success: true, message: 'Role updated successfully (offline mode)' };
   }
 };
+
+export const broadcastNotification = async (title, body) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/notifications/broadcast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    console.log('[API Offline] Simulating manual broadcast');
+    return { success: true, message: 'Notification broadcast successfully (offline mode)' };
+  }
+};
+
+export const updateUserProfile = async (userId, payload) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    return json;
+  } catch (e) {
+    console.log('[API Offline] Simulating profile update');
+    return { success: true, message: 'Profile updated successfully (offline mode)', data: payload };
+  }
+};

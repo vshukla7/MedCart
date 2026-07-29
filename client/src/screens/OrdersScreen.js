@@ -2,19 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { fetchOrders } from '../services/api';
+import { useOrders } from '../context/OrderContext';
 
 export const OrdersScreen = ({ currentUser }) => {
   const { theme } = useTheme();
-  const [orders, setOrders] = useState([]);
+  const { orders, loadUserOrders } = useOrders();
   const [loading, setLoading] = useState(false);
 
   const loadHistory = async () => {
     if (!currentUser?._id) return;
     setLoading(true);
     try {
-      const history = await fetchOrders({ role: 'user', userId: currentUser._id });
-      setOrders(history || []);
+      await loadUserOrders(currentUser._id, 'user');
     } catch (e) {
       console.error(e);
     } finally {
@@ -82,6 +81,21 @@ export const OrdersScreen = ({ currentUser }) => {
                 </Text>
               ))}
             </View>
+
+            {/* Address Details */}
+            {ord.shippingAddress && (
+              <View style={styles.addressSection}>
+                <Text style={[styles.addressText, { color: theme.textSecondary }]}>
+                  📍 Ship to: {ord.shippingAddress.fullName} ({ord.shippingAddress.phone})
+                </Text>
+                <Text style={[styles.addressText, { color: theme.textSecondary, marginTop: 2 }]}>
+                  {ord.shippingAddress.street || ord.shippingAddress.address}
+                </Text>
+                <Text style={[styles.coordText, { color: theme.textSecondary, marginTop: 2 }]}>
+                  Location Pin: Lat {ord.shippingAddress.latitude || 19.0760}, Lng {ord.shippingAddress.longitude || 72.8777}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.bottomRow}>
               <View>
@@ -218,5 +232,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center'
+  },
+  addressSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 8,
+    marginBottom: 8,
+    gap: 2
+  },
+  coordText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3B82F6'
   }
 });

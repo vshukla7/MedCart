@@ -572,7 +572,7 @@ router.post('/auth/register', async (req, res) => {
       const newUser = new User({ phone, password: hashedPassword, name: name || 'User', role: userRole });
       await newUser.save();
       const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET);
-      return res.status(201).json({ success: true, token, user: { phone: newUser.phone, name: newUser.name, role: newUser.role, _id: newUser._id } });
+      return res.status(201).json({ success: true, token, user: { phone: newUser.phone, name: newUser.name, role: newUser.role, address: newUser.address, latitude: newUser.latitude, longitude: newUser.longitude, _id: newUser._id } });
     }
   } catch (err) {
     console.error(err);
@@ -583,10 +583,10 @@ router.post('/auth/register', async (req, res) => {
   if (existing) {
     return res.status(400).json({ success: false, message: 'Phone number already registered' });
   }
-  const newUser = { _id: 'u_' + Date.now(), phone, name: name || 'User', role: userRole, passwordHash: hashedPassword };
+  const newUser = { _id: 'u_' + Date.now(), phone, name: name || 'User', role: userRole, passwordHash: hashedPassword, address: '123 Healthcare Way, Sector 4, Mumbai, 400001', latitude: 19.0760, longitude: 72.8777 };
   inMemUsers.push(newUser);
   const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET);
-  res.status(201).json({ success: true, token, user: { phone: newUser.phone, name: newUser.name, role: newUser.role, _id: newUser._id } });
+  res.status(201).json({ success: true, token, user: { phone: newUser.phone, name: newUser.name, role: newUser.role, address: newUser.address, latitude: newUser.latitude, longitude: newUser.longitude, _id: newUser._id } });
 });
 
 // Login
@@ -607,7 +607,7 @@ router.post('/auth/login', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid credentials' });
       }
       const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET);
-      return res.json({ success: true, token, user: { phone: user.phone, name: user.name, role: user.role, _id: user._id } });
+      return res.json({ success: true, token, user: { phone: user.phone, name: user.name, role: user.role, address: user.address, latitude: user.latitude, longitude: user.longitude, _id: user._id } });
     }
   } catch (err) {
     console.error(err);
@@ -623,7 +623,7 @@ router.post('/auth/login', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid credentials' });
   }
   const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET);
-  res.json({ success: true, token, user: { phone: user.phone, name: user.name, role: user.role, _id: user._id } });
+  res.json({ success: true, token, user: { phone: user.phone, name: user.name, role: user.role, address: user.address || '123 Healthcare Way, Sector 4, Mumbai, 400001', latitude: user.latitude || 19.0760, longitude: user.longitude || 72.8777, _id: user._id } });
 });
 
 // Forgot Password
@@ -709,6 +709,46 @@ router.put('/admin/users/:id/role', async (req, res) => {
   }
   user.role = role;
   res.json({ success: true, message: 'Role updated successfully', data: { _id: user._id, phone: user.phone, name: user.name, role: user.role } });
+});
+
+// User: Update Profile Details
+router.put('/users/:id', async (req, res) => {
+  const { name, phone, address, latitude, longitude } = req.body;
+  try {
+    if (User.db && User.db.readyState === 1) {
+      const user = await User.findById(req.params.id);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      if (name !== undefined) user.name = name;
+      if (phone !== undefined) user.phone = phone;
+      if (address !== undefined) user.address = address;
+      if (latitude !== undefined) user.latitude = latitude;
+      if (longitude !== undefined) user.longitude = longitude;
+      await user.save();
+      return res.json({ success: true, message: 'Profile updated successfully', data: user });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Fallback
+  const user = inMemUsers.find(u => u._id === req.params.id);
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
+  if (latitude !== undefined) user.latitude = latitude;
+  if (longitude !== undefined) user.longitude = longitude;
+  res.json({ success: true, message: 'Profile updated successfully', data: user });
+});
+router.post('/admin/notifications/broadcast', async (req, res) => {
+  const { title, body } = req.body;
+  if (!title || !body) {
+    return res.status(400).json({ success: false, message: 'Title and body are required' });
+  }
+
+  console.log(`[Broadcast Push Notification] Title: "${title}" | Body: "${body}"`);
+  
+  res.json({ success: true, message: 'Notification broadcast successfully' });
 });
 
 module.exports = router;

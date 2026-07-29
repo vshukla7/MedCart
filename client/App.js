@@ -81,6 +81,7 @@ function MainApp() {
             onOpenOrders={() => setActiveTab('orders')}
             onOpenAdminDashboard={() => setShowAdminDashboard(true)}
             onOpenStaffDashboard={() => setShowStaffDashboard(true)}
+            onUpdateUser={setCurrentUser}
           />
         );
       default:

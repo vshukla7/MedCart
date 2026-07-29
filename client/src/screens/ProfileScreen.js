@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { EditProfileModal } from '../components/EditProfileModal';
 
 export const ProfileScreen = ({ 
   onOpenReminders, 
@@ -10,9 +11,11 @@ export const ProfileScreen = ({
   currentUser,
   onLogout,
   onOpenAdminDashboard,
-  onOpenStaffDashboard
+  onOpenStaffDashboard,
+  onUpdateUser
 }) => {
   const { theme, isDarkMode, toggleTheme } = useTheme();
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -132,18 +135,24 @@ export const ProfileScreen = ({
         </TouchableOpacity>
 
         {/* Saved Addresses */}
-        <View style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <TouchableOpacity 
+          style={[styles.menuItem, { backgroundColor: theme.card, borderColor: theme.border }]}
+          onPress={() => setShowEditProfile(true)}
+          activeOpacity={0.8}
+        >
           <View style={styles.menuLeft}>
             <View style={[styles.iconBox, { backgroundColor: '#DBEAFE' }]}>
               <Ionicons name="location-outline" size={18} color="#2563EB" />
             </View>
-            <View>
+            <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.menuText, { color: theme.textPrimary }]}>Saved Addresses</Text>
-              <Text style={[styles.subText, { color: theme.textSecondary }]}>123 Healthcare Way, Mumbai</Text>
+              <Text style={[styles.subText, { color: theme.textSecondary }]} numberOfLines={1}>
+                {currentUser?.address || '123 Healthcare Way, Mumbai'}
+              </Text>
             </View>
           </View>
           <Feather name="chevron-right" size={18} color={theme.textSecondary} />
-        </View>
+        </TouchableOpacity>
 
         {/* Chat with Pharmacist */}
         <TouchableOpacity 
@@ -166,6 +175,14 @@ export const ProfileScreen = ({
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Profile / Address Modal */}
+      <EditProfileModal
+        visible={showEditProfile}
+        currentUser={currentUser}
+        onClose={() => setShowEditProfile(false)}
+        onUpdateUser={onUpdateUser}
+      />
     </View>
   );
 };
