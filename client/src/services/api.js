@@ -161,6 +161,22 @@ export const fetchLatestOrder = async (userId) => {
   };
 };
 
+let clientInMemOrders = [
+  {
+    _id: 'ord_101',
+    orderNumber: 'MED-784920',
+    items: [{ name: 'Paracetamol 650mg Extra', quantity: 2, price: 45 }],
+    totalAmount: 90,
+    deliveryCharge: 20,
+    grandTotal: 110,
+    status: 'Out for Delivery',
+    statusStep: 3,
+    paymentMethod: 'Cash on Delivery (COD)',
+    createdAt: new Date().toISOString(),
+    shippingAddress: { fullName: 'Standard User', phone: '+91 77777 77777', street: '123 Healthcare Way, Sector 4, Mumbai, 400001' }
+  }
+];
+
 export const fetchOrders = async (params = {}) => {
   try {
     const query = new URLSearchParams(params).toString();
@@ -170,22 +186,17 @@ export const fetchOrders = async (params = {}) => {
   } catch (e) {
     console.log('[API Offline] Error fetching orders');
   }
-  return [];
+  
+  // Offline simulation fallback
+  let list = [...clientInMemOrders];
+  if (params.userId) {
+    list = list.filter(o => o.userId === params.userId);
+  }
+  return list;
 };
 
 export const createOrder = async (orderData) => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
-    });
-    const json = await res.json();
-    if (json.success) return json.data;
-  } catch (e) {
-    console.log('[API Offline] Created offline order record');
-  }
-  return {
+  const offlineOrder = {
     _id: 'ord_' + Date.now(),
     orderNumber: 'MED-' + Math.floor(100000 + Math.random() * 900000),
     ...orderData,
@@ -193,6 +204,24 @@ export const createOrder = async (orderData) => {
     statusStep: 1,
     createdAt: new Date().toISOString()
   };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      clientInMemOrders.unshift(json.data);
+      return json.data;
+    }
+  } catch (e) {
+    console.log('[API Offline] Created offline order record');
+  }
+
+  clientInMemOrders.unshift(offlineOrder);
+  return offlineOrder;
 };
 
 export const confirmOrder = async (orderId, confirmedBy) => {
@@ -203,11 +232,29 @@ export const confirmOrder = async (orderId, confirmedBy) => {
       body: JSON.stringify({ confirmedBy })
     });
     const json = await res.json();
-    return json;
+    if (json.success && json.data) {
+      const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+      if (idx > -1) {
+        clientInMemOrders[idx] = json.data;
+      }
+      return json;
+    }
   } catch (e) {
     console.log('[API Offline] Error confirming order');
-    return { success: false };
   }
+
+  // Offline fallback
+  const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+  if (idx > -1) {
+    clientInMemOrders[idx] = {
+      ...clientInMemOrders[idx],
+      status: 'Confirmed',
+      statusStep: 2,
+      confirmedBy: confirmedBy
+    };
+    return { success: true, data: clientInMemOrders[idx] };
+  }
+  return { success: false };
 };
 
 export const assignOrder = async (orderId, staffId) => {
@@ -218,11 +265,29 @@ export const assignOrder = async (orderId, staffId) => {
       body: JSON.stringify({ staffId })
     });
     const json = await res.json();
-    return json;
+    if (json.success && json.data) {
+      const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+      if (idx > -1) {
+        clientInMemOrders[idx] = json.data;
+      }
+      return json;
+    }
   } catch (e) {
     console.log('[API Offline] Error assigning order');
-    return { success: false };
   }
+
+  // Offline fallback
+  const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+  if (idx > -1) {
+    clientInMemOrders[idx] = {
+      ...clientInMemOrders[idx],
+      status: 'Packed',
+      statusStep: 3,
+      assignedStaff: staffId
+    };
+    return { success: true, data: clientInMemOrders[idx] };
+  }
+  return { success: false };
 };
 
 export const updateOrderStatus = async (orderId, status) => {
@@ -233,11 +298,37 @@ export const updateOrderStatus = async (orderId, status) => {
       body: JSON.stringify({ status })
     });
     const json = await res.json();
-    return json;
+    if (json.success && json.data) {
+      const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+      if (idx > -1) {
+        clientInMemOrders[idx] = json.data;
+      }
+      return json;
+    }
   } catch (e) {
     console.log('[API Offline] Error updating status');
-    return { success: false };
   }
+
+  // Offline fallback
+  const idx = clientInMemOrders.findIndex(o => o._id === orderId);
+  if (idx > -1) {
+    const statusMap = {
+      'Pending': 1,
+      'Confirmed': 2,
+      'Packed': 3,
+      'Out for Delivery': 4,
+      'Delivered': 5,
+      'Cancelled': 0
+    };
+    clientInMemOrders[idx] = {
+      ...clientInMemOrders[idx],
+      status: status,
+      statusStep: statusMap[status] || 0,
+      isPaid: status === 'Delivered' ? true : clientInMemOrders[idx].isPaid
+    };
+    return { success: true, data: clientInMemOrders[idx] };
+  }
+  return { success: false };
 };
 
 export const fetchSalesAnalytics = async () => {

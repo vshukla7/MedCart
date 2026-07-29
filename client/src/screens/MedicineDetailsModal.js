@@ -8,95 +8,105 @@ export const MedicineDetailsModal = ({ visible, medicine, onClose }) => {
   const { theme } = useTheme();
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [activeMedicine, setActiveMedicine] = useState(null);
 
-  if (!medicine) return null;
+  React.useEffect(() => {
+    if (medicine) {
+      setActiveMedicine(medicine);
+      setQuantity(1);
+    }
+  }, [medicine]);
 
   const handleAdd = () => {
-    addToCart(medicine, quantity);
+    if (activeMedicine) {
+      addToCart(activeMedicine, quantity);
+    }
     onClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Ionicons name="close-circle" size={28} color={theme.textSecondary} />
-          </TouchableOpacity>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Image source={{ uri: medicine.image }} style={styles.image} resizeMode="cover" />
-
-            <View style={styles.body}>
-              {medicine.requiresPrescription && (
-                <View style={styles.rxBanner}>
-                  <Ionicons name="warning-outline" size={16} color="#EF4444" />
-                  <Text style={styles.rxText}>Prescription Required for this Medicine</Text>
-                </View>
-              )}
-
-              <Text style={[styles.name, { color: theme.textPrimary }]}>{medicine.name}</Text>
-              <Text style={[styles.generic, { color: theme.textSecondary }]}>
-                {medicine.genericName || medicine.category} • {medicine.manufacturer || 'MedCart Labs'}
-              </Text>
-
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color="#F59E0B" />
-                <Text style={[styles.rating, { color: theme.textPrimary }]}>{medicine.rating || '4.8'}</Text>
-                <Text style={[styles.reviews, { color: theme.textSecondary }]}>({medicine.reviewsCount || 150} reviews)</Text>
-              </View>
-
-              <View style={styles.divider} />
-
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Description</Text>
-              <Text style={[styles.description, { color: theme.textSecondary }]}>
-                {medicine.description || 'High quality certified pharmaceutical product. Always take under medical guidance.'}
-              </Text>
-
-              {medicine.dosage && (
-                <>
-                  <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Recommended Dosage</Text>
-                  <Text style={[styles.dosageText, { color: theme.textSecondary }]}>{medicine.dosage}</Text>
-                </>
-              )}
-
-              <View style={styles.divider} />
-
-              {/* Quantity Picker */}
-              <View style={styles.qtyRow}>
-                <Text style={[styles.qtyLabel, { color: theme.textPrimary }]}>Select Quantity:</Text>
-                <View style={[styles.qtySelector, { backgroundColor: theme.inputBg }]}>
-                  <TouchableOpacity 
-                    onPress={() => setQuantity(q => Math.max(1, q - 1))}
-                    style={styles.qtyBtn}
-                  >
-                    <Feather name="minus" size={18} color={theme.textPrimary} />
-                  </TouchableOpacity>
-                  <Text style={[styles.qtyVal, { color: theme.textPrimary }]}>{quantity}</Text>
-                  <TouchableOpacity 
-                    onPress={() => setQuantity(q => q + 1)}
-                    style={styles.qtyBtn}
-                  >
-                    <Feather name="plus" size={18} color={theme.textPrimary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Bottom Action Footer */}
-          <View style={[styles.footer, { borderColor: theme.border }]}>
-            <View>
-              <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Total Price</Text>
-              <Text style={styles.totalPrice}>₹{medicine.price * quantity}</Text>
-            </View>
-
-            <TouchableOpacity style={styles.addToCartBtn} onPress={handleAdd} activeOpacity={0.85}>
-              <Ionicons name="cart" size={20} color="#FFFFFF" />
-              <Text style={styles.addToCartText}>Add to Cart</Text>
+        {activeMedicine && (
+          <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Ionicons name="close-circle" size={28} color={theme.textSecondary} />
             </TouchableOpacity>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Image source={{ uri: activeMedicine.image }} style={styles.image} resizeMode="cover" />
+
+              <View style={styles.body}>
+                {activeMedicine.requiresPrescription && (
+                  <View style={styles.rxBanner}>
+                    <Ionicons name="warning-outline" size={16} color="#EF4444" />
+                    <Text style={styles.rxText}>Prescription Required for this Medicine</Text>
+                  </View>
+                )}
+
+                <Text style={[styles.name, { color: theme.textPrimary }]}>{activeMedicine.name}</Text>
+                <Text style={[styles.generic, { color: theme.textSecondary }]}>
+                  {activeMedicine.genericName || activeMedicine.category} • {activeMedicine.manufacturer || 'MedCart Labs'}
+                </Text>
+
+                <View style={styles.ratingRow}>
+                  <Ionicons name="star" size={16} color="#F59E0B" />
+                  <Text style={[styles.rating, { color: theme.textPrimary }]}>{activeMedicine.rating || '4.8'}</Text>
+                  <Text style={[styles.reviews, { color: theme.textSecondary }]}>({activeMedicine.reviewsCount || 150} reviews)</Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Description</Text>
+                <Text style={[styles.description, { color: theme.textSecondary }]}>
+                  {activeMedicine.description || 'High quality certified pharmaceutical product. Always take under medical guidance.'}
+                </Text>
+
+                {activeMedicine.dosage && (
+                  <>
+                    <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Recommended Dosage</Text>
+                    <Text style={[styles.dosageText, { color: theme.textSecondary }]}>{activeMedicine.dosage}</Text>
+                  </>
+                )}
+
+                <View style={styles.divider} />
+
+                {/* Quantity Picker */}
+                <View style={styles.qtyRow}>
+                  <Text style={[styles.qtyLabel, { color: theme.textPrimary }]}>Select Quantity:</Text>
+                  <View style={[styles.qtySelector, { backgroundColor: theme.inputBg }]}>
+                    <TouchableOpacity 
+                      onPress={() => setQuantity(q => Math.max(1, q - 1))}
+                      style={styles.qtyBtn}
+                    >
+                      <Feather name="minus" size={18} color={theme.textPrimary} />
+                    </TouchableOpacity>
+                    <Text style={[styles.qtyVal, { color: theme.textPrimary }]}>{quantity}</Text>
+                    <TouchableOpacity 
+                      onPress={() => setQuantity(q => q + 1)}
+                      style={styles.qtyBtn}
+                    >
+                      <Feather name="plus" size={18} color={theme.textPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Bottom Action Footer */}
+            <View style={[styles.footer, { borderColor: theme.border }]}>
+              <View>
+                <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Total Price</Text>
+                <Text style={styles.totalPrice}>₹{activeMedicine.price * quantity}</Text>
+              </View>
+
+              <TouchableOpacity style={styles.addToCartBtn} onPress={handleAdd} activeOpacity={0.85}>
+                <Ionicons name="cart" size={20} color="#FFFFFF" />
+                <Text style={styles.addToCartText}>Add to Cart</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </Modal>
   );

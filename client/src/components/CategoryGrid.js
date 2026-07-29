@@ -78,18 +78,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   card: {
-    width: '48%',
+    width: '48.5%',
     padding: 16,
     borderRadius: 20,
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     minHeight: 110,
-    marginBottom: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 8
+    shadowRadius: 8,
+    marginBottom: 12
   },
   selectedCard: {
     borderWidth: 2,

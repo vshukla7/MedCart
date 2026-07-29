@@ -3,24 +3,17 @@ import React, { createContext, useState, useContext } from 'react';
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([
-    {
-      _id: 'm1',
-      name: 'Paracetamol 650mg Extra',
-      price: 45,
-      originalPrice: 60,
-      quantity: 2,
-      image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=60',
-      requiresPrescription: false
-    }
-  ]);
+  const [cartItems, setCartItems] = useState([]);
 
   const addToCart = (medicine, qty = 1) => {
     setCartItems(prev => {
       const existingIndex = prev.findIndex(item => item._id === medicine._id);
       if (existingIndex > -1) {
         const updated = [...prev];
-        updated[existingIndex].quantity += qty;
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + qty
+        };
         return updated;
       }
       return [...prev, { ...medicine, quantity: qty }];

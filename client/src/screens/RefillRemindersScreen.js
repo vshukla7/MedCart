@@ -63,10 +63,7 @@ const cancelReminderNotification = async (notifId) => {
 
 export const RefillRemindersScreen = ({ visible, onClose }) => {
   const { theme } = useTheme();
-  const [reminders, setReminders] = useState([
-    { id: '1', name: 'Paracetamol 650mg', dosage: '1 Tablet after meal', time: '08:00 AM', active: true, notificationId: null },
-    { id: '2', name: 'Glucophage 500mg', dosage: '1 Tablet with dinner', time: '08:30 PM', active: true, notificationId: null }
-  ]);
+  const [reminders, setReminders] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newMedName, setNewMedName] = useState('');
   const [newDosage, setNewDosage] = useState('');

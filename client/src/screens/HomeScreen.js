@@ -11,6 +11,7 @@ import { OrderTrackingCard } from '../components/OrderTrackingCard';
 import { fetchCategories, fetchMedicines } from '../services/api';
 
 export const HomeScreen = ({ 
+  currentUser,
   onSelectCategory, 
   onSelectMedicine, 
   onOpenProfile,
@@ -57,9 +58,10 @@ export const HomeScreen = ({
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning 👋';
-    if (hour < 17) return 'Good Afternoon ☀️';
-    return 'Good Evening 🌙';
+    const name = currentUser?.name ? `, ${currentUser.name}` : '';
+    if (hour < 12) return `Good Morning${name} 👋`;
+    if (hour < 17) return `Good Afternoon${name} ☀️`;
+    return `Good Evening${name} 🌙`;
   };
 
   return (

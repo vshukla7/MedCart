@@ -21,6 +21,10 @@ export const CategoriesScreen = ({ initialCategory = 'all', onSelectMedicine }) 
   }, []);
 
   useEffect(() => {
+    setSelectedCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
     const loadMeds = async () => {
       const list = await fetchMedicines({ category: selectedCategory });
       setMedicines(list);
@@ -76,21 +80,23 @@ export const CategoriesScreen = ({ initialCategory = 'all', onSelectMedicine }) 
               onPress={() => onSelectMedicine(med)}
               activeOpacity={0.8}
             >
-              <Image source={{ uri: med.image }} style={styles.image} resizeMode="cover" />
-              
-              {med.requiresPrescription && (
-                <View style={styles.rxBadge}>
-                  <Text style={styles.rxText}>Rx Required</Text>
-                </View>
-              )}
+              <View>
+                <Image source={{ uri: med.image }} style={styles.image} resizeMode="cover" />
+                
+                {med.requiresPrescription && (
+                  <View style={styles.rxBadge}>
+                    <Text style={styles.rxText}>Rx Required</Text>
+                  </View>
+                )}
 
-              <Text style={[styles.name, { color: theme.textPrimary }]} numberOfLines={2}>
-                {med.name}
-              </Text>
+                <Text style={[styles.name, { color: theme.textPrimary }]} numberOfLines={2}>
+                  {med.name}
+                </Text>
 
-              <Text style={[styles.generic, { color: theme.textSecondary }]} numberOfLines={1}>
-                {med.genericName || med.category}
-              </Text>
+                <Text style={[styles.generic, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {med.genericName || med.category}
+                </Text>
+              </View>
 
               <View style={styles.bottomRow}>
                 <View>
@@ -156,19 +162,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   card: {
-    width: '48%',
+    width: '48.5%',
+    height: 230,
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
     position: 'relative',
-    marginBottom: 12
+    marginBottom: 12,
+    justifyContent: 'space-between'
   },
   image: {
     width: '100%',
     height: 100,
     borderRadius: 14,
     backgroundColor: '#F1F5F9',
-    marginBottom: 8
+    marginBottom: 6
   },
   rxBadge: {
     position: 'absolute',
@@ -187,18 +195,20 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: '700',
-    minHeight: 34
+    height: 36,
+    lineHeight: 17
   },
   generic: {
     fontSize: 11,
     fontWeight: '500',
-    marginVertical: 4
+    height: 16,
+    marginVertical: 2
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6
+    marginTop: 2
   },
   price: {
     fontSize: 15,

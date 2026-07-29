@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { loginUser, registerUser, forgotPasswordUser } from '../services/api';
@@ -110,9 +110,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.background }]} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <View style={styles.logoCircle}>
-          <Feather name="plus-square" size={32} color="#FFFFFF" />
-        </View>
+        <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
         <Text style={[styles.title, { color: theme.textPrimary }]}>MedCart Pharmacy</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {mode === 'login' && 'Log in with your phone and password'}
@@ -271,19 +269,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 36
   },
-  logoCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: '#22C55E',
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
     marginBottom: 16,
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6
+    borderWidth: 1,
+    borderColor: '#E2E8F0'
   },
   title: {
     fontSize: 24,

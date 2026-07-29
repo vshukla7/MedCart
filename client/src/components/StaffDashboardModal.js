@@ -159,11 +159,14 @@ export const StaffDashboardModal = ({ visible, onClose, currentUser }) => {
                     </View>
                   </View>
 
-                  <Text style={[styles.cardDetails, { color: theme.textSecondary }]}>
-                    Address: {ord.shippingAddress?.fullName} | {ord.shippingAddress?.street}, {ord.shippingAddress?.city}
+                  <Text style={[styles.cardDetails, { color: theme.textPrimary, fontWeight: '800' }]}>
+                    👤 Recipient Name: {ord.shippingAddress?.fullName || 'N/A'}
                   </Text>
                   <Text style={[styles.cardDetails, { color: theme.textSecondary }]}>
-                    Phone: {ord.shippingAddress?.phone}
+                    📍 Delivery Address: {ord.shippingAddress?.street || ord.shippingAddress?.address || 'N/A'}
+                  </Text>
+                  <Text style={[styles.cardDetails, { color: theme.textPrimary, fontWeight: '800' }]}>
+                    📞 Contact Phone: {ord.shippingAddress?.phone || 'N/A'}
                   </Text>
                   <Text style={[styles.cardDetails, { color: '#F59E0B', fontWeight: '800' }]}>
                     Collect COD Cash: ₹{ord.grandTotal}

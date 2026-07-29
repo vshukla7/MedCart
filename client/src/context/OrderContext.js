@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { fetchLatestOrder, createOrder as apiCreateOrder, fetchOrders } from '../services/api';
+import { fetchLatestOrder, createOrder as apiCreateOrder, fetchOrders, updateOrderStatus } from '../services/api';
 
 const OrderContext = createContext();
 
@@ -38,6 +38,24 @@ export const OrderProvider = ({ children }) => {
     }));
   };
 
+  const cancelOrder = async (orderId) => {
+    const res = await updateOrderStatus(orderId, 'Cancelled');
+    if (res.success) {
+      setOrders(prev => prev.map(o => {
+        if (o._id === orderId) {
+          const updated = { ...o, statusStep: 0, status: 'Cancelled' };
+          if (activeOrder && activeOrder._id === orderId) {
+            setActiveOrder(updated);
+          }
+          return updated;
+        }
+        return o;
+      }));
+      return true;
+    }
+    return false;
+  };
+
   return (
     <OrderContext.Provider value={{
       orders,
@@ -45,7 +63,8 @@ export const OrderProvider = ({ children }) => {
       placeOrder,
       loadUserOrders,
       setOrders,
-      advanceOrderStep
+      advanceOrderStep,
+      cancelOrder
     }}>
       {children}
     </OrderContext.Provider>

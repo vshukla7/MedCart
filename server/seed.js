@@ -133,55 +133,28 @@ const seedData = async () => {
       await Medicine.deleteMany({});
       await Medicine.insertMany(medicines);
 
-      const existingOrders = await Order.countDocuments();
-      if (existingOrders === 0) {
-        await Order.create({
-          orderNumber: 'MED-' + Math.floor(100000 + Math.random() * 900000),
-          items: [
-            { medicineId: '1', name: 'Paracetamol 650mg Extra', price: 45, quantity: 2, image: medicines[0].image },
-            { medicineId: '4', name: 'Vitamin C 1000mg Chewable', price: 95, quantity: 1, image: medicines[3].image }
-          ],
-          totalAmount: 185,
-          deliveryCharge: 0,
-          grandTotal: 185,
-          status: 'Out for Delivery',
-          statusStep: 3,
-          paymentMethod: 'UPI',
-          isPaid: true
-        });
-      }
+      // Clear all transactional logs to deliver a completely clean database
+      await Order.deleteMany({});
+      console.log('[Seed] Orders collection cleared completely.');
 
-      const existingReminders = await Reminder.countDocuments();
-      if (existingReminders === 0) {
-        await Reminder.insertMany([
-          { medicineName: 'Paracetamol 650mg', dosage: '1 Tablet after meal', time: '08:00 AM', frequency: 'Daily', isActive: true },
-          { medicineName: 'Glucophage 500mg', dosage: '1 Tablet with dinner', time: '08:30 PM', frequency: 'Daily', isActive: true }
-        ]);
-      }
+      await Reminder.deleteMany({});
+      console.log('[Seed] Reminders collection cleared completely.');
 
-      const existingChat = await ChatMessage.countDocuments();
-      if (existingChat === 0) {
-        await ChatMessage.insertMany([
-          { sender: 'pharmacist', text: 'Hello! I am Dr. Sharma, your MedCart pharmacist. How can I help you today?', timestamp: new Date(Date.now() - 1000 * 60 * 5) },
-          { sender: 'user', text: 'Hi, do I need a doctor prescription to buy Amoxicillin 500mg?', timestamp: new Date(Date.now() - 1000 * 60 * 3) },
-          { sender: 'pharmacist', text: 'Yes, Amoxicillin is a prescription antibiotic. You can easily tap the Upload Prescription button on Home to send it to us via WhatsApp!', timestamp: new Date(Date.now() - 1000 * 60 * 1) }
-        ]);
-      }
+      await ChatMessage.deleteMany({});
+      console.log('[Seed] ChatMessages collection cleared completely.');
 
-      // Seed Users
-      const existingUsers = await User.countDocuments();
-      if (existingUsers === 0) {
-        const adminHash = await bcrypt.hash('admin123', 10);
-        const staffHash = await bcrypt.hash('staff123', 10);
-        const userHash = await bcrypt.hash('user123', 10);
+      // Clear custom/test users and reset to baseline developer roles
+      await User.deleteMany({});
+      const adminHash = await bcrypt.hash('admin123', 10);
+      const staffHash = await bcrypt.hash('staff123', 10);
+      const userHash = await bcrypt.hash('user123', 10);
 
-        await User.insertMany([
-          { phone: '+91 99999 99999', name: 'Admin User', role: 'admin', password: adminHash },
-          { phone: '+91 88888 88888', name: 'Staff User', role: 'staff', password: staffHash },
-          { phone: '+91 77777 77777', name: 'Standard User', role: 'user', password: userHash }
-        ]);
-        console.log('[Seed] Default roles & users seeded successfully.');
-      }
+      await User.insertMany([
+        { phone: '+91 99999 99999', name: 'Admin User', role: 'admin', password: adminHash },
+        { phone: '+91 88888 88888', name: 'Staff User', role: 'staff', password: staffHash },
+        { phone: '+91 77777 77777', name: 'Standard User', role: 'user', password: userHash }
+      ]);
+      console.log('[Seed] Baseline users reset and seeded successfully.');
 
       console.log('[Seed] Database seeded successfully with MedCart pharmacy data!');
     } else {

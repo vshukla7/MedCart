@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, SafeAreaView, StatusBar, Platform } from 'react-native';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import { CartProvider } from './src/context/CartContext';
+import { CartProvider, useCart } from './src/context/CartContext';
 import { OrderProvider } from './src/context/OrderContext';
 import { BottomNavigation } from './src/components/BottomNavigation';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -19,6 +19,7 @@ import { StaffDashboardModal } from './src/components/StaffDashboardModal';
 
 function MainApp() {
   const { theme, isDarkMode } = useTheme();
+  const { clearCart } = useCart();
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -42,13 +43,21 @@ function MainApp() {
 
   const renderCurrentScreen = () => {
     if (!currentUser) {
-      return <LoginScreen onLoginSuccess={setCurrentUser} />;
+      return (
+        <LoginScreen 
+          onLoginSuccess={(user) => {
+            clearCart();
+            setCurrentUser(user);
+          }} 
+        />
+      );
     }
 
     switch (activeTab) {
       case 'home':
         return (
           <HomeScreen
+            currentUser={currentUser}
             onSelectCategory={handleSelectCategory}
             onSelectMedicine={setSelectedMedicine}
             onOpenProfile={() => setActiveTab('profile')}
@@ -76,7 +85,10 @@ function MainApp() {
         return (
           <ProfileScreen
             currentUser={currentUser}
-            onLogout={() => setCurrentUser(null)}
+            onLogout={() => {
+              clearCart();
+              setCurrentUser(null);
+            }}
             onOpenReminders={() => setShowReminders(true)}
             onOpenChat={() => setShowChat(true)}
             onOpenOrders={() => setActiveTab('orders')}

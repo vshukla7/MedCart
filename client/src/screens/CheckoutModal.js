@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, TextInput, Animated } from 'react-native';
 import { Ionicons, FontAwesome5, Feather } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrderContext';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export const CheckoutModal = ({ visible, onClose, onSuccessOrder, currentUser }) => {
   const { theme } = useTheme();
@@ -11,34 +20,66 @@ export const CheckoutModal = ({ visible, onClose, onSuccessOrder, currentUser })
   const { placeOrder } = useOrders();
 
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery (COD)');
+
+  const triggerOrderNotification = async (order) => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('[Notification] Permission not granted');
+        return;
+      }
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `📦 Order Placed: #${order.orderNumber}`,
+          body: `Your order for ₹${order.grandTotal} is successfully placed and is pending verification.`,
+          sound: true,
+        },
+        trigger: null,
+      });
+    } catch (e) {
+      console.error('[Notification Error] Failed to schedule notification', e);
+    }
+  };
   
   const [addressName, setAddressName] = useState(currentUser?.name || 'John Doe');
   const [addressPhone, setAddressPhone] = useState(currentUser?.phone || '+91 98765 43210');
   const [addressText, setAddressText] = useState(currentUser?.address || '123 Healthcare Way, Sector 4, Mumbai, 400001');
-  const [latitude, setLatitude] = useState(currentUser?.latitude?.toString() || '19.0760');
-  const [longitude, setLongitude] = useState(currentUser?.longitude?.toString() || '72.8777');
   
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
+
+  const scaleAnim = useRef(new Animated.Value(0)).current;
 
   // Keep address synchronized with currentUser if it changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentUser) {
       setAddressName(currentUser.name || 'John Doe');
       setAddressPhone(currentUser.phone || '+91 98765 43210');
       setAddressText(currentUser.address || '123 Healthcare Way, Sector 4, Mumbai, 400001');
-      setLatitude(currentUser.latitude?.toString() || '19.0760');
-      setLongitude(currentUser.longitude?.toString() || '72.8777');
     }
   }, [currentUser, visible]);
 
-  // Simulate Map Click Pin Movement
-  const handleMapPinPress = () => {
-    const randomLat = (19.05 + Math.random() * 0.05).toFixed(4);
-    const randomLng = (72.85 + Math.random() * 0.05).toFixed(4);
-    setLatitude(randomLat);
-    setLongitude(randomLng);
-    Alert.alert('Location Pinned', `Delivery location set to Lat: ${randomLat}, Lng: ${randomLng}`);
-  };
+  // Reset success state when modal is opened
+  useEffect(() => {
+    if (visible) {
+      setIsSuccess(false);
+      setPlacedOrder(null);
+      scaleAnim.setValue(0);
+    }
+  }, [visible]);
+
+  // Spring animation for checkout success
+  useEffect(() => {
+    if (isSuccess) {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 40,
+        friction: 6,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isSuccess]);
 
   const handlePlaceOrder = async () => {
     if (!addressName.trim() || !addressText.trim() || !addressPhone.trim()) {
@@ -61,19 +102,27 @@ export const CheckoutModal = ({ visible, onClose, onSuccessOrder, currentUser })
           street: addressText.trim(),
           city: 'Mumbai',
           postalCode: '400001',
-          latitude: parseFloat(latitude) || 19.0760,
-          longitude: parseFloat(longitude) || 72.8777
+          latitude: 19.0760,
+          longitude: 72.8777
         }
       };
 
       const newOrder = await placeOrder(orderPayload);
       clearCart();
+      setPlacedOrder(newOrder);
+      setIsSuccess(true);
       setIsPlacing(false);
-      onClose();
-      onSuccessOrder(newOrder);
+      triggerOrderNotification(newOrder);
     } catch (e) {
       setIsPlacing(false);
       Alert.alert('Checkout Error', 'Unable to place order. Please try again.');
+    }
+  };
+
+  const handleGoToOrders = () => {
+    onClose();
+    if (onSuccessOrder && placedOrder) {
+      onSuccessOrder(placedOrder);
     }
   };
 
@@ -82,141 +131,142 @@ export const CheckoutModal = ({ visible, onClose, onSuccessOrder, currentUser })
       <View style={styles.overlay}>
         <View style={[styles.cardContainer, { backgroundColor: theme.card }]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.textPrimary }]}>Checkout</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close-circle" size={26} color={theme.textSecondary} />
-            </TouchableOpacity>
+            <Text style={[styles.title, { color: theme.textPrimary }]}>
+              {isSuccess ? 'Order Placed' : 'Checkout'}
+            </Text>
+            {!isSuccess && (
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close-circle" size={26} color={theme.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Delivery Address Section */}
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Shipping Details</Text>
-            <View style={styles.formContainer}>
-              <View style={styles.inputBox}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Full Name</Text>
-                <TextInput
-                  style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
-                  value={addressName}
-                  onChangeText={setAddressName}
-                  placeholder="Enter receiver's name"
-                  placeholderTextColor={theme.textSecondary}
-                />
-              </View>
+          {isSuccess && placedOrder ? (
+            <View style={styles.successContainer}>
+              <Animated.View style={[styles.successIconCircle, { transform: [{ scale: scaleAnim }] }]}>
+                <Ionicons name="checkmark-circle" size={88} color="#22C55E" />
+              </Animated.View>
 
-              <View style={styles.inputBox}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Phone Number</Text>
-                <TextInput
-                  style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
-                  value={addressPhone}
-                  onChangeText={setAddressPhone}
-                  placeholder="Enter contact number"
-                  placeholderTextColor={theme.textSecondary}
-                  keyboardType="phone-pad"
-                />
-              </View>
+              <Text style={[styles.successTitle, { color: theme.textPrimary }]}>Order Placed Successfully! 🎉</Text>
+              <Text style={[styles.successSubtitle, { color: theme.textSecondary }]}>
+                Your medicine order has been received. Our pharmacist will contact the recipient to verify any required prescriptions.
+              </Text>
 
-              <View style={styles.inputBox}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Delivery Address</Text>
-                <TextInput
-                  style={[styles.textInputArea, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
-                  value={addressText}
-                  onChangeText={setAddressText}
-                  placeholder="Enter complete shipping address"
-                  placeholderTextColor={theme.textSecondary}
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-
-              <Text style={[styles.inputLabel, { color: theme.textSecondary, marginTop: 4 }]}>Pin Address on Map</Text>
-              <TouchableOpacity 
-                style={[styles.checkoutMapContainer, { borderColor: theme.border }]} 
-                onPress={handleMapPinPress}
-                activeOpacity={0.9}
-              >
-                <View style={styles.mapSimulationOverlay}>
-                  {/* Streets */}
-                  <View style={styles.streetHorizontal} />
-                  <View style={styles.streetVertical1} />
-                  <View style={styles.streetVertical2} />
-                  {/* Pin */}
-                  <View style={styles.mapPin}>
-                    <Ionicons name="location" size={24} color="#EF4444" />
-                  </View>
-                  <View style={styles.mapInstruction}>
-                    <Text style={styles.instructionText}>Tap inside map to drop pin 📍</Text>
-                  </View>
+              <View style={[styles.successSummaryBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                <Text style={[styles.summaryBoxHeading, { color: theme.textPrimary }]}>Delivery Information</Text>
+                
+                <View style={styles.summaryBoxRow}>
+                  <Text style={[styles.summaryBoxLabel, { color: theme.textSecondary }]}>Order ID:</Text>
+                  <Text style={[styles.summaryBoxVal, { color: theme.textPrimary }]}>#{placedOrder.orderNumber}</Text>
                 </View>
+
+                <View style={styles.summaryBoxRow}>
+                  <Text style={[styles.summaryBoxLabel, { color: theme.textSecondary }]}>Recipient Name:</Text>
+                  <Text style={[styles.summaryBoxVal, { color: theme.textPrimary }]}>{placedOrder.shippingAddress?.fullName}</Text>
+                </View>
+
+                <View style={styles.summaryBoxRow}>
+                  <Text style={[styles.summaryBoxLabel, { color: theme.textSecondary }]}>Contact Phone:</Text>
+                  <Text style={[styles.summaryBoxVal, { color: theme.textPrimary }]}>{placedOrder.shippingAddress?.phone}</Text>
+                </View>
+
+                <View style={styles.summaryBoxRow}>
+                  <Text style={[styles.summaryBoxLabel, { color: theme.textSecondary }]}>Total Price:</Text>
+                  <Text style={[styles.summaryBoxVal, { color: '#22C55E', fontWeight: '800' }]}>₹{placedOrder.grandTotal}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.successBtn} onPress={handleGoToOrders} activeOpacity={0.8}>
+                <Text style={styles.successBtnText}>Go to My Orders</Text>
+                <Feather name="arrow-right" size={18} color="#FFFFFF" />
               </TouchableOpacity>
-
-              <View style={styles.coordinatesRow}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Latitude</Text>
-                  <TextInput
-                    style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
-                    value={latitude}
-                    onChangeText={setLatitude}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Longitude</Text>
-                  <TextInput
-                    style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
-                    value={longitude}
-                    onChangeText={setLongitude}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
             </View>
+          ) : (
+            <>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Delivery Address Section */}
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Shipping Details</Text>
+                <View style={styles.formContainer}>
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Recipient Name</Text>
+                    <TextInput
+                      style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
+                      value={addressName}
+                      onChangeText={setAddressName}
+                      placeholder="Name of person receiving the order"
+                      placeholderTextColor={theme.textSecondary}
+                    />
+                  </View>
 
-            {/* Payment Method Section */}
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Payment Method</Text>
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Phone Number</Text>
+                    <TextInput
+                      style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
+                      value={addressPhone}
+                      onChangeText={setAddressPhone}
+                      placeholder="Contact number for delivery person to call"
+                      placeholderTextColor={theme.textSecondary}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
 
-            <View
-              style={[
-                styles.paymentOption,
-                { backgroundColor: theme.inputBg, borderColor: '#22C55E' }
-              ]}
-            >
-              <View style={styles.payLeft}>
-                <FontAwesome5 name="money-bill-wave" size={18} color="#F59E0B" />
-                <Text style={[styles.payTitle, { color: theme.textPrimary }]}>Cash on Delivery (COD)</Text>
-              </View>
-              <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-            </View>
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Delivery Address</Text>
+                    <TextInput
+                      style={[styles.textInputArea, { backgroundColor: theme.inputBg, color: theme.textPrimary, borderColor: theme.border }]}
+                      value={addressText}
+                      onChangeText={setAddressText}
+                      placeholder="Enter complete shipping address"
+                      placeholderTextColor={theme.textSecondary}
+                      multiline
+                      numberOfLines={2}
+                    />
+                  </View>
+                </View>
 
-            {/* Bill Summary */}
-            <View style={styles.billBox}>
-              <View style={styles.billRow}>
-                <Text style={{ color: theme.textSecondary }}>Item Total</Text>
-                <Text style={{ color: theme.textPrimary, fontWeight: '700' }}>₹{subtotal}</Text>
-              </View>
-              <View style={styles.billRow}>
-                <Text style={{ color: theme.textSecondary }}>Delivery Charges</Text>
-                <Text style={{ color: deliveryCharge === 0 ? '#22C55E' : theme.textPrimary, fontWeight: '700' }}>
-                  {deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`}
+                {/* Payment Method Section */}
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Payment Method</Text>
+
+                <View style={[styles.paymentOption, { backgroundColor: theme.inputBg, borderColor: '#22C55E' }]}>
+                  <View style={styles.payLeft}>
+                    <FontAwesome5 name="money-bill-wave" size={18} color="#F59E0B" />
+                    <Text style={[styles.payTitle, { color: theme.textPrimary }]}>Cash on Delivery (COD)</Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                </View>
+
+                {/* Bill Summary */}
+                <View style={styles.billBox}>
+                  <View style={styles.billRow}>
+                    <Text style={{ color: theme.textSecondary }}>Item Total</Text>
+                    <Text style={{ color: theme.textPrimary, fontWeight: '700' }}>₹{subtotal}</Text>
+                  </View>
+                  <View style={styles.billRow}>
+                    <Text style={{ color: theme.textSecondary }}>Delivery Charges</Text>
+                    <Text style={{ color: deliveryCharge === 0 ? '#22C55E' : theme.textPrimary, fontWeight: '700' }}>
+                      {deliveryCharge === 0 ? 'FREE' : `₹${deliveryCharge}`}
+                    </Text>
+                  </View>
+                  <View style={styles.divider} />
+                  <View style={styles.billRow}>
+                    <Text style={{ color: theme.textPrimary, fontWeight: '800', fontSize: 16 }}>Amount Payable</Text>
+                    <Text style={{ color: '#22C55E', fontWeight: '800', fontSize: 18 }}>₹{grandTotal}</Text>
+                  </View>
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity
+                style={styles.placeOrderBtn}
+                onPress={handlePlaceOrder}
+                disabled={isPlacing}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.placeOrderText}>
+                  {isPlacing ? 'Placing Order...' : `Pay & Confirm Order (₹${grandTotal})`}
                 </Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.billRow}>
-                <Text style={{ color: theme.textPrimary, fontWeight: '800', fontSize: 16 }}>Amount Payable</Text>
-                <Text style={{ color: '#22C55E', fontWeight: '800', fontSize: 18 }}>₹{grandTotal}</Text>
-              </View>
-            </View>
-          </ScrollView>
-
-          <TouchableOpacity
-            style={styles.placeOrderBtn}
-            onPress={handlePlaceOrder}
-            disabled={isPlacing}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.placeOrderText}>
-              {isPlacing ? 'Placing Order...' : `Pay & Confirm Order (₹${grandTotal})`}
-            </Text>
-          </TouchableOpacity>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -280,70 +330,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlignVertical: 'top'
   },
-  checkoutMapContainer: {
-    height: 100,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    backgroundColor: '#E2F0D9',
-    position: 'relative'
-  },
-  mapSimulationOverlay: {
-    flex: 1,
-    position: 'relative'
-  },
-  streetHorizontal: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '40%',
-    height: 16,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.8
-  },
-  streetVertical1: {
-    position: 'absolute',
-    left: '25%',
-    top: 0,
-    bottom: 0,
-    width: 16,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.8
-  },
-  streetVertical2: {
-    position: 'absolute',
-    left: '70%',
-    top: 0,
-    bottom: 0,
-    width: 16,
-    backgroundColor: '#FFFFFF',
-    opacity: 0.8
-  },
-  mapPin: {
-    position: 'absolute',
-    left: '46%',
-    top: '25%',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  mapInstruction: {
-    position: 'absolute',
-    bottom: 4,
-    left: 6,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4
-  },
-  instructionText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: '800'
-  },
-  coordinatesRow: {
-    flexDirection: 'row',
-    gap: 10
-  },
   paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,6 +369,78 @@ const styles = StyleSheet.create({
     marginTop: 10
   },
   placeOrderText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800'
+  },
+  successContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 14
+  },
+  successIconCircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center'
+  },
+  successSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8
+  },
+  successSummaryBox: {
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    gap: 8,
+    marginTop: 6
+  },
+  summaryBoxHeading: {
+    fontSize: 13,
+    fontWeight: '800',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    paddingBottom: 6,
+    marginBottom: 2
+  },
+  summaryBoxRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  summaryBoxLabel: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  summaryBoxVal: {
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  successBtn: {
+    backgroundColor: '#22C55E',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 16,
+    gap: 8,
+    width: '100%',
+    marginTop: 10,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4
+  },
+  successBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800'

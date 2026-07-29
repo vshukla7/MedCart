@@ -14,6 +14,17 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
   const [orders, setOrders] = useState([]);
   const [staffList, setStaffList] = useState([]);
 
+  const getAssignedStaffName = (ord) => {
+    const assignedId = ord.assignedStaff || ord.assignedTo?._id || ord.assignedTo;
+    const staffObj = staffList.find(s => s._id === assignedId);
+    return staffObj ? `Assigned to: ${staffObj.name}` : 'Not Assigned';
+  };
+
+  const isStaffAssigned = (ord, staffId) => {
+    const assignedId = ord.assignedStaff || ord.assignedTo?._id || ord.assignedTo;
+    return assignedId === staffId;
+  };
+
   // Roles Tab State
   const [searchPhone, setSearchPhone] = useState('');
   const [users, setUsers] = useState([]);
@@ -94,7 +105,7 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
   useEffect(() => {
     if (visible) {
       if (activeTab === 'dispatch') loadDispatchData();
-      if (activeTab === 'sales' || activeTab === 'analytics') loadAnalyticsData();
+      if (activeTab === 'analytics') loadAnalyticsData();
     }
   }, [visible, activeTab]);
 
@@ -183,7 +194,6 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
           {[
             { id: 'dispatch', label: 'Dispatch', icon: 'send' },
             { id: 'roles', label: 'Roles', icon: 'users' },
-            { id: 'sales', label: 'Sales', icon: 'bar-chart-2' },
             { id: 'analytics', label: 'Analytics', icon: 'pie-chart' },
             { id: 'notify', label: 'Notify', icon: 'bell' }
           ].map(t => (
@@ -220,8 +230,11 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
                     </View>
                   </View>
                   
+                  <Text style={[styles.cardDetails, { color: theme.textPrimary, fontWeight: '800' }]}>
+                    👤 Recipient: {ord.shippingAddress?.fullName || 'N/A'} ({ord.shippingAddress?.phone || 'N/A'})
+                  </Text>
                   <Text style={[styles.cardDetails, { color: theme.textSecondary }]}>
-                    Customer: {ord.shippingAddress?.fullName} ({ord.shippingAddress?.phone})
+                    📍 Address: {ord.shippingAddress?.street || ord.shippingAddress?.address || 'N/A'}
                   </Text>
                   <Text style={[styles.cardDetails, { color: theme.textSecondary }]}>
                     Total Amount: ₹{ord.grandTotal} (Includes ₹20 delivery fee)
@@ -248,7 +261,7 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
                     {ord.status !== 'Pending' && ord.status !== 'Delivered' && ord.status !== 'Cancelled' && (
                       <View style={styles.assignmentBox}>
                         <Text style={[styles.assignLabel, { color: theme.textSecondary }]}>
-                          {ord.assignedTo ? `Assigned to: ${ord.assignedTo.name}` : 'Not Assigned'}
+                          {getAssignedStaffName(ord)}
                         </Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.staffChips}>
                           {staffList.map(staff => (
@@ -256,11 +269,11 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
                               key={staff._id}
                               style={[
                                 styles.staffChip,
-                                ord.assignedTo?._id === staff._id ? { backgroundColor: '#22C55E' } : { backgroundColor: theme.inputBg, borderColor: theme.border }
+                                isStaffAssigned(ord, staff._id) ? { backgroundColor: '#22C55E' } : { backgroundColor: theme.inputBg, borderColor: theme.border }
                               ]}
                               onPress={() => handleAssign(ord._id, staff._id)}
                             >
-                              <Text style={[styles.staffChipText, ord.assignedTo?._id === staff._id ? { color: '#FFFFFF' } : { color: theme.textPrimary }]}>
+                              <Text style={[styles.staffChipText, isStaffAssigned(ord, staff._id) ? { color: '#FFFFFF' } : { color: theme.textPrimary }]}>
                                 {staff.name}
                               </Text>
                             </TouchableOpacity>
@@ -321,40 +334,6 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
             </View>
           )}
 
-          {/* Sales Tab */}
-          {activeTab === 'sales' && (
-            <View style={styles.tabSection}>
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Staff COD Collection & Deliveries</Text>
-              {analyticsData.staffPerformance?.map((staff, idx) => (
-                <View key={staff._id || idx} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <Text style={[styles.userName, { color: theme.textPrimary }]}>{staff.name}</Text>
-                  <Text style={[styles.userPhone, { color: theme.textSecondary }]}>Phone: {staff.phone} | Role: {staff.role?.toUpperCase()}</Text>
-                  
-                  <View style={styles.statsGrid}>
-                    <View style={styles.statBox}>
-                      <Text style={styles.statVal}>{staff.ordersDelivered}</Text>
-                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Delivered</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                      <Text style={styles.statVal}>₹{staff.totalSales}</Text>
-                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sales (COD)</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                      <Text style={styles.statVal}>₹{staff.avgOrderValue}</Text>
-                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Avg Value</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.subStatsRow}>
-                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Pending: {staff.pending}</Text>
-                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Cancelled: {staff.cancelled}</Text>
-                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Success Rate: {staff.successRate}%</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <View style={styles.tabSection}>
@@ -401,6 +380,35 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
                   <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Cancelled</Text>
                 </View>
               </View>
+
+              <Text style={[styles.sectionHeading, { color: theme.textPrimary, marginTop: 14 }]}>Staff COD Collection & Deliveries</Text>
+              {analyticsData.staffPerformance?.map((staff, idx) => (
+                <View key={staff._id || idx} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Text style={[styles.userName, { color: theme.textPrimary }]}>{staff.name}</Text>
+                  <Text style={[styles.userPhone, { color: theme.textSecondary }]}>Phone: {staff.phone} | Role: {staff.role?.toUpperCase()}</Text>
+                  
+                  <View style={styles.statsGrid}>
+                    <View style={styles.statBox}>
+                      <Text style={styles.statVal}>{staff.ordersDelivered}</Text>
+                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Delivered</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                      <Text style={styles.statVal}>₹{staff.totalSales}</Text>
+                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sales (COD)</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                      <Text style={styles.statVal}>₹{staff.avgOrderValue}</Text>
+                      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Avg Value</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.subStatsRow}>
+                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Pending: {staff.pending}</Text>
+                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Cancelled: {staff.cancelled}</Text>
+                    <Text style={[styles.subStatLabel, { color: theme.textSecondary }]}>Success Rate: {staff.successRate}%</Text>
+                  </View>
+                </View>
+              ))}
             </View>
           )}
 

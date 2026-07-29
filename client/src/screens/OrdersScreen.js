@@ -1,13 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useOrders } from '../context/OrderContext';
 
 export const OrdersScreen = ({ currentUser }) => {
   const { theme } = useTheme();
-  const { orders, loadUserOrders } = useOrders();
+  const { orders, loadUserOrders, cancelOrder } = useOrders();
   const [loading, setLoading] = useState(false);
+
+  const handleCancelOrder = (orderId) => {
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order?',
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel', 
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const success = await cancelOrder(orderId);
+              if (success) {
+                Alert.alert('Success', 'Your order has been cancelled.');
+              } else {
+                Alert.alert('Error', 'Could not cancel order. Please try again.');
+              }
+            } catch (e) {
+              Alert.alert('Error', 'Failed to cancel order.');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const loadHistory = async () => {
     if (!currentUser?._id) return;
@@ -86,13 +115,7 @@ export const OrdersScreen = ({ currentUser }) => {
             {ord.shippingAddress && (
               <View style={styles.addressSection}>
                 <Text style={[styles.addressText, { color: theme.textSecondary }]}>
-                  📍 Ship to: {ord.shippingAddress.fullName} ({ord.shippingAddress.phone})
-                </Text>
-                <Text style={[styles.addressText, { color: theme.textSecondary, marginTop: 2 }]}>
-                  {ord.shippingAddress.street || ord.shippingAddress.address}
-                </Text>
-                <Text style={[styles.coordText, { color: theme.textSecondary, marginTop: 2 }]}>
-                  Location Pin: Lat {ord.shippingAddress.latitude || 19.0760}, Lng {ord.shippingAddress.longitude || 72.8777}
+                  📍 Address: {ord.shippingAddress.street || ord.shippingAddress.address}
                 </Text>
               </View>
             )}
@@ -105,11 +128,24 @@ export const OrdersScreen = ({ currentUser }) => {
 
               <View style={styles.paymentInfo}>
                 <Text style={[styles.payMethodText, { color: theme.textSecondary }]}>{ord.paymentMethod}</Text>
-                <Text style={[styles.payStatusText, { color: ord.isPaid ? '#16A34A' : '#EF4444' }]}>
-                  {ord.isPaid ? 'Paid' : 'Cash Pending'}
+                <Text style={[styles.payStatusText, { color: ord.status === 'Cancelled' ? '#EF4444' : '#EF4444' }]}>
+                  {ord.status === 'Cancelled' ? 'Cancelled' : (ord.isPaid ? 'Paid' : 'Cash Pending')}
                 </Text>
               </View>
             </View>
+
+            {ord.status === 'Pending' && (
+              <View style={{ marginTop: 12 }}>
+                <TouchableOpacity 
+                  style={styles.cancelBtn} 
+                  onPress={() => handleCancelOrder(ord._id)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
+                  <Text style={styles.cancelBtnText}>Cancel Order</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ))}
 
@@ -240,9 +276,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 2
   },
-  coordText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#3B82F6'
+  cancelBtn: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6
+  },
+  cancelBtnText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '800'
   }
 });
