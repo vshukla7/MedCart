@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "MedCart",
+    "slug": "medcart",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.medcart.pharmacy"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
