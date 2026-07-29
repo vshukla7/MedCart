@@ -20,19 +20,22 @@ app.get('/health', (req, res) => {
 // API Endpoints
 app.use('/api', apiRoutes);
 
-// Connect DB & start server
-const startServer = async () => {
-  await connectDB();
-  await seedData();
-  
-  app.listen(PORT, () => {
-    console.log(`====================================================`);
-    console.log(`🚀 MedCart Backend Server is running on port ${PORT}`);
-    console.log(`📡 API Health Check: http://localhost:${PORT}/health`);
-    console.log(`💊 Categories API: http://localhost:${PORT}/api/categories`);
-    console.log(`📦 Medicines API:  http://localhost:${PORT}/api/medicines`);
-    console.log(`====================================================`);
-  });
-};
+// Connect DB then start
+const init = connectDB().then(() => seedData()).catch(console.error);
 
-startServer();
+// For local dev: start HTTP server
+if (process.env.NODE_ENV !== 'production') {
+  init.then(() => {
+    app.listen(PORT, () => {
+      console.log(`====================================================`);
+      console.log(`🚀 MedCart Backend Server is running on port ${PORT}`);
+      console.log(`📡 API Health Check: http://localhost:${PORT}/health`);
+      console.log(`💊 Categories API: http://localhost:${PORT}/api/categories`);
+      console.log(`📦 Medicines API:  http://localhost:${PORT}/api/medicines`);
+      console.log(`====================================================`);
+    });
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
