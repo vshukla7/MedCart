@@ -1,30 +1,19 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  const connUri = process.env.MONGO_URI || 'mongodb+srv://medicalbhawani77_db_user:pSP5dtQ3V71OPjBa@medcart.1rnjcrd.mongodb.net/?appName=MedCart';
+  const connUri = process.env.MONGO_URI;
+  if (!connUri) {
+    console.error('[MongoDB Error] MONGO_URI is not defined in the environment variables (.env)');
+    process.exit(1);
+  }
   
-  // Non-blocking connection attempt
-  mongoose.connect(connUri, { serverSelectionTimeoutMS: 2000 })
-    .then(() => {
-      console.log(`[MongoDB] Connected to local/remote MongoDB at ${mongoose.connection.host}`);
-    })
-    .catch((err) => {
-      console.log('[MongoDB] Local database not found (ECONNREFUSED). Enabling fast memory mode.');
-      
-      // Try memory server non-blocking
-      try {
-        const { MongoMemoryServer } = require('mongodb-memory-server');
-        MongoMemoryServer.create({ instance: { dbName: 'medcart' } })
-          .then(mem => {
-            const uri = mem.getUri();
-            return mongoose.connect(uri);
-          })
-          .then(() => console.log('[MongoDB Memory Server] Connected!'))
-          .catch(() => console.log('[MongoDB Memory] Memory server download skipped. Using API memory fallback mode.'));
-      } catch (e) {
-        console.log('[MongoDB] Memory server module optional. Using API memory fallback mode.');
-      }
-    });
+  try {
+    await mongoose.connect(connUri);
+    console.log(`[MongoDB] Connected successfully to Atlas`);
+  } catch (err) {
+    console.error('[MongoDB Error] Failed to connect to MongoDB Atlas:', err.message);
+    process.exit(1);
+  }
 };
 
 module.exports = connectDB;
