@@ -18,6 +18,11 @@
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "medcart-pharmacy"
+      }
     }
   }
 }

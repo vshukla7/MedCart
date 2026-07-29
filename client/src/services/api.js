@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://med-cart-inky.vercel.app/api';
 
 // Fallback Initial Data for seamless instant preview
 const MOCK_CATEGORIES = [
