@@ -38,9 +38,9 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
         sound: true,
       },
       trigger: {
+        type: 'daily',
         hour: hours,
         minute: minutes,
-        repeats: true,
       },
     });
     console.log(`Scheduled notification ${id} at ${hours}:${minutes}`);
