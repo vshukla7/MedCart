@@ -3,7 +3,6 @@
     "name": "MedCart",
     "slug": "medcart",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.jpeg",
     "userInterfaceStyle": "automatic",
@@ -14,7 +13,11 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.medcart.pharmacy"
+      "package": "com.medcart.pharmacy",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.jpeg",
+        "backgroundColor": "#ffffff"
+      }
     },
     "web": {
       "bundler": "metro"
