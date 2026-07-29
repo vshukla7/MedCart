@@ -144,7 +144,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
             <Feather name="phone" size={18} color={theme.textSecondary} />
             <TextInput
               style={[styles.input, { color: theme.textPrimary }]}
-              placeholder="+91 99999 99999"
+              placeholder="+91 00000 00000"
               placeholderTextColor={theme.textSecondary}
               value={phone}
               onChangeText={handlePhoneChange}

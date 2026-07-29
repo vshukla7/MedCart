@@ -189,8 +189,10 @@ export const fetchOrders = async (params = {}) => {
   
   // Offline simulation fallback
   let list = [...clientInMemOrders];
-  if (params.userId) {
+  if (params.role === 'user' && params.userId) {
     list = list.filter(o => o.userId === params.userId);
+  } else if (params.role === 'staff' && params.userId) {
+    list = list.filter(o => o.assignedStaff === params.userId || o.assignedTo === params.userId || o.assignedTo?._id === params.userId);
   }
   return list;
 };
