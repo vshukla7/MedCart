@@ -3,24 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native'
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
-const PHONE_NUMBER = '919876543210';
-
-export const Header = ({ onOpenProfile }) => {
+export const Header = ({ onOpenProfile, onOpenChat }) => {
   const { theme, isDarkMode, toggleTheme } = useTheme();
 
-  const handleChatPress = async () => {
-    const whatsappUrl = `whatsapp://send?phone=${PHONE_NUMBER}`;
-    const webWhatsappUrl = `https://api.whatsapp.com/send?phone=${PHONE_NUMBER}`;
-    try {
-      const supported = await Linking.canOpenURL(whatsappUrl);
-      if (supported) {
-        await Linking.openURL(whatsappUrl);
-      } else {
-        await Linking.openURL(webWhatsappUrl);
-      }
-    } catch (err) {
-      await Linking.openURL(webWhatsappUrl);
-    }
+  const handleChatPress = () => {
+    if (onOpenChat) onOpenChat();
   };
 
   return (

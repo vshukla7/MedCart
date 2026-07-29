@@ -14,7 +14,8 @@ export const HomeScreen = ({
   onSelectCategory, 
   onSelectMedicine, 
   onOpenProfile,
-  onOpenOrders 
+  onOpenOrders,
+  onOpenChat
 }) => {
   const { theme } = useTheme();
   const [categories, setCategories] = useState([]);
@@ -63,7 +64,7 @@ export const HomeScreen = ({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header onOpenProfile={onOpenProfile} />
+      <Header onOpenProfile={onOpenProfile} onOpenChat={onOpenChat} />
       
       <SearchBar 
         value={searchQuery}

@@ -53,6 +53,7 @@ function MainApp() {
             onSelectMedicine={setSelectedMedicine}
             onOpenProfile={() => setActiveTab('profile')}
             onOpenOrders={() => setActiveTab('orders')}
+            onOpenChat={() => setShowChat(true)}
           />
         );
       case 'categories':

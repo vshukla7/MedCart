@@ -153,14 +153,15 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12
+    justifyContent: 'space-between'
   },
   card: {
     width: '48%',
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
-    position: 'relative'
+    position: 'relative',
+    marginBottom: 12
   },
   image: {
     width: '100%',

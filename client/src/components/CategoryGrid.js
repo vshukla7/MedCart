@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12
+    justifyContent: 'space-between'
   },
   card: {
     width: '48%',
@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     minHeight: 110,
+    marginBottom: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
