@@ -88,6 +88,14 @@ When running Expo Go on a physical phone, `localhost` refers to the phone itself
 
 ---
 
+## 🔑 Default Roles & Seeded Credentials
+Use the following credentials to test different user roles:
+- **Admin**: `+91 99999 99999` (Password: `admin123`)
+- **Staff**: `+91 88888 88888` (Password: `staff123`)
+- **User**: `+91 77777 77777` (Password: `user123`)
+
+---
+
 ## 📁 Project Structure
 
 ```
