@@ -1,202 +1,176 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking, ScrollView } from 'react-native';
+import { Ionicons, Feather, FontAwesome5 } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 export const PharmacistChatScreen = ({ visible, onClose }) => {
   const { theme } = useTheme();
-  const [messages, setMessages] = useState([
-    { id: '1', sender: 'pharmacist', text: 'Hello! I am Dr. Sharma, your MedCart Pharmacist 👨‍⚕️. How can I assist you with your medicines today?' },
-    { id: '2', sender: 'user', text: 'Hi Dr. Sharma, is Paracetamol 650mg safe to take after lunch?' },
-    { id: '3', sender: 'pharmacist', text: 'Yes, Paracetamol 650mg is generally recommended after meals to prevent gastric irritation. Drink plenty of water as well!' }
-  ]);
-  const [inputText, setInputText] = useState('');
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    const userMsg = { id: Date.now().toString(), sender: 'user', text: inputText };
-    setMessages(prev => [...prev, userMsg]);
-    const textCopy = inputText;
-    setInputText('');
+  const whatsappNumbers = [
+    { label: 'Pharmacist Support 1', number: '8084481565' },
+    { label: 'Pharmacist Support 2', number: '7781984962' },
+    { label: 'Pharmacist Support 3', number: '9279318477' }
+  ];
 
-    // Simulated Pharmacist Reply
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'pharmacist',
-          text: `Thank you for asking! Regarding "${textCopy}", our pharmacy team recommends consulting your prescription details or reaching out via WhatsApp for direct verification.`
+  const handleOpenWhatsApp = (num) => {
+    // Add country code +91
+    const waUrl = `https://wa.me/91${num}`;
+    Linking.canOpenURL(waUrl)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(waUrl);
+        } else {
+          Linking.openURL(`https://wa.me/91${num}`);
         }
-      ]);
-    }, 1200);
+      })
+      .catch(() => {
+        Linking.openURL(`https://wa.me/91${num}`);
+      });
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <KeyboardAvoidingView 
-        style={[styles.container, { backgroundColor: theme.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <View style={[styles.header, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.backBtn}>
-            <Feather name="arrow-left" size={24} color={theme.textPrimary} />
-          </TouchableOpacity>
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={[styles.modalCard, { backgroundColor: theme.card }]}>
           
-          <View style={styles.headerInfo}>
-            <View style={styles.pharmacistAvatar}>
-              <Text style={styles.avatarEmoji}>👨‍⚕️</Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTitleRow}>
+              <FontAwesome5 name="whatsapp" size={24} color="#22C55E" />
+              <Text style={[styles.title, { color: theme.textPrimary }]}>Connect on WhatsApp</Text>
             </View>
-            <View>
-              <Text style={[styles.pharmacistName, { color: theme.textPrimary }]}>Dr. Sharma, PharmD</Text>
-              <View style={styles.onlineRow}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Online • Official MedCart Pharmacist</Text>
-              </View>
-            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.description, { color: theme.textSecondary }]}>
+            In-app chat is currently disabled. Please select one of our official pharmacist support numbers to instantly connect and verify prescriptions directly on WhatsApp:
+          </Text>
+
+          <ScrollView contentContainerStyle={styles.numbersList} showsVerticalScrollIndicator={false}>
+            {whatsappNumbers.map((item, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.numberCard, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
+                onPress={() => handleOpenWhatsApp(item.number)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cardLeft}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarEmoji}>👨‍⚕️</Text>
+                  </View>
+                  <View>
+                    <Text style={[styles.labelName, { color: theme.textPrimary }]}>{item.label}</Text>
+                    <Text style={[styles.phoneNum, { color: theme.textSecondary }]}>+91 {item.number}</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward-circle" size={22} color="#22C55E" />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+              Available 24x7 for medical prescription reviews.
+            </Text>
           </View>
         </View>
-
-        <ScrollView contentContainerStyle={styles.messagesList} showsVerticalScrollIndicator={false}>
-          {messages.map(msg => {
-            const isUser = msg.sender === 'user';
-            return (
-              <View 
-                key={msg.id} 
-                style={[
-                  styles.msgBubble,
-                  isUser ? styles.userBubble : [styles.pharmacistBubble, { backgroundColor: theme.card, borderColor: theme.border }]
-                ]}
-              >
-                <Text style={[styles.msgText, { color: isUser ? '#FFFFFF' : theme.textPrimary }]}>
-                  {msg.text}
-                </Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        <View style={[styles.inputBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: theme.inputBg, color: theme.textPrimary }]}
-            placeholder="Ask pharmacist a question..."
-            placeholderTextColor={theme.textSecondary}
-            value={inputText}
-            onChangeText={setInputText}
-            onSubmitEditing={handleSend}
-          />
-          <TouchableOpacity 
-            style={[styles.sendBtn, { opacity: inputText.trim() ? 1 : 0.6 }]} 
-            onPress={handleSend}
-            disabled={!inputText.trim()}
-          >
-            <Ionicons name="send" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: 28,
+    padding: 20,
+    maxHeight: 460,
+    gap: 16,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 45,
-    paddingBottom: 14,
     borderBottomWidth: 1,
-    gap: 12
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    paddingBottom: 12
   },
-  backBtn: {
-    padding: 4
-  },
-  headerInfo: {
+  headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10
   },
-  pharmacistAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  title: {
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  closeBtn: {
+    padding: 4
+  },
+  description: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontWeight: '500'
+  },
+  numbersList: {
+    gap: 10
+  },
+  numberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  avatarBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center'
   },
   avatarEmoji: {
-    fontSize: 22
+    fontSize: 18
   },
-  pharmacistName: {
-    fontSize: 16,
+  labelName: {
+    fontSize: 14,
     fontWeight: '800'
   },
-  onlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2
+  phoneNum: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1
   },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#22C55E'
-  },
-  onlineText: {
-    fontSize: 11,
-    color: '#16A34A',
-    fontWeight: '600'
-  },
-  messagesList: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 12
-  },
-  msgBubble: {
-    maxWidth: '82%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#22C55E',
-    borderBottomRightRadius: 4
-  },
-  pharmacistBubble: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderBottomLeftRadius: 4
-  },
-  msgText: {
-    fontSize: 14,
-    lineHeight: 20
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  footer: {
     borderTopWidth: 1,
-    gap: 10
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingTop: 12,
+    alignItems: 'center'
   },
-  textInput: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    height: 46,
-    fontSize: 14
-  },
-  sendBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#22C55E',
-    alignItems: 'center',
-    justifyContent: 'center'
+  footerText: {
+    fontSize: 11,
+    fontWeight: '600'
   }
 });
