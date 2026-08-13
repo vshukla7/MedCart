@@ -39,7 +39,12 @@ export const CategoriesScreen = ({ initialCategory = 'all', onSelectMedicine }) 
       </View>
 
       {/* Category Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScrollView}
+        contentContainerStyle={styles.tabsScroll}
+      >
         <TouchableOpacity
           style={[
             styles.tab,
@@ -138,15 +143,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800'
   },
+  tabsScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 50
+  },
   tabsScroll: {
     paddingHorizontal: 20,
     gap: 10,
-    paddingBottom: 12
+    alignItems: 'center',
+    paddingBottom: 6
   },
   tab: {
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 20
+    borderRadius: 20,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   tabText: {
     fontSize: 13,

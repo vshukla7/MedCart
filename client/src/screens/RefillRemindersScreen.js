@@ -4,13 +4,26 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import * as Notifications from 'expo-notifications';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  // Android: Create a notification channel
+  if (Notifications.setNotificationChannelAsync) {
+    Notifications.setNotificationChannelAsync('medcart-reminders', {
+      name: 'Medicine Reminders',
+      importance: Notifications.AndroidImportance?.MAX ?? 5,
+      sound: 'default',
+    }).catch(() => {});
+  }
+} catch (e) {
+  console.log('Notification handler setup skipped:', e.message);
+}
 
 const parseTime = (timeStr) => {
   const parts = timeStr.trim().split(/\s+/);
@@ -38,9 +51,10 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
         sound: true,
       },
       trigger: {
-        type: 'daily',
+        type: Notifications.SchedulableTriggerInputTypes?.DAILY ?? 'daily',
         hour: hours,
         minute: minutes,
+        repeats: true,
       },
     });
     console.log(`Scheduled notification ${id} at ${hours}:${minutes}`);
