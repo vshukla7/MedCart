@@ -3,7 +3,10 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput,
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { searchUsersByPhone, updateUserRole, fetchOrders, confirmOrder, assignOrder, fetchSalesAnalytics, broadcastNotification } from '../services/api';
+
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
   const { theme } = useTheme();
@@ -49,15 +52,21 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
     try {
       const res = await broadcastNotification(broadcastTitle.trim(), broadcastBody.trim());
       if (res.success) {
-        // Trigger a local push notification immediately for instant visual verification
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `📢 ${broadcastTitle.trim()}`,
-            body: broadcastBody.trim(),
-            sound: true,
-          },
-          trigger: null,
-        });
+        // Trigger a local push notification only in standalone/dev builds
+        if (!isExpoGo) {
+          try {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: `📢 ${broadcastTitle.trim()}`,
+                body: broadcastBody.trim(),
+                sound: true,
+              },
+              trigger: null,
+            });
+          } catch (e) {
+            console.log('[Notification] Skipped in Expo Go');
+          }
+        }
         
         Alert.alert('Success', 'Notification broadcast successfully to all users!');
         setBroadcastTitle('');
