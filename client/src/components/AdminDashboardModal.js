@@ -86,7 +86,12 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
     setLoading(true);
     try {
       const allOrders = await fetchOrders({ role: 'admin' });
-      setOrders(allOrders || []);
+      const sorted = (allOrders || []).sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB - dateA;
+      });
+      setOrders(sorted);
 
       // Get all staff members
       const matchedStaff = await searchUsersByPhone('');

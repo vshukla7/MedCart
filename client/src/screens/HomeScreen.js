@@ -7,7 +7,6 @@ import { CategoryGrid } from '../components/CategoryGrid';
 import { TodayOffersSection } from '../components/TodayOffersSection';
 import { PopularMedicinesSection } from '../components/PopularMedicinesSection';
 import { UploadPrescriptionCard } from '../components/UploadPrescriptionCard';
-import { OrderTrackingCard } from '../components/OrderTrackingCard';
 import { fetchCategories, fetchMedicines } from '../services/api';
 
 export const HomeScreen = ({ 
@@ -122,9 +121,6 @@ export const HomeScreen = ({
 
             {/* Upload Prescription CTA (WhatsApp) */}
             <UploadPrescriptionCard />
-
-            {/* Order Tracking Progress Card */}
-            <OrderTrackingCard onTrackPress={onOpenOrders} />
 
             {/* Popular Medicines */}
             <PopularMedicinesSection 

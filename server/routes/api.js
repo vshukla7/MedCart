@@ -230,15 +230,30 @@ router.get('/medicines/:id', async (req, res) => {
 router.get('/orders', async (req, res) => {
   const { userId, role, assignedTo } = req.query;
 
+  const mongoose = require('mongoose');
+
   try {
     if (Order.db && Order.db.readyState === 1) {
       let query = {};
       if (role === 'user' && userId) {
-        query.userId = userId;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          query.userId = userId;
+        } else {
+          // If query userId is invalid format (mock), match by string matching fallback or return empty
+          query.userId = null; 
+        }
       } else if (role === 'staff' && userId) {
-        query.assignedTo = userId;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          query.assignedTo = userId;
+        } else {
+          query.assignedTo = null;
+        }
       } else if (assignedTo) {
-        query.assignedTo = assignedTo;
+        if (mongoose.Types.ObjectId.isValid(assignedTo)) {
+          query.assignedTo = assignedTo;
+        } else {
+          query.assignedTo = null;
+        }
       }
       
       const orders = await Order.find(query)
@@ -248,7 +263,7 @@ router.get('/orders', async (req, res) => {
       return res.json({ success: true, count: orders.length, data: orders });
     }
   } catch (err) {
-    console.error(err);
+    console.error('Fetch Orders Error:', err);
   }
 
   // Fallback
@@ -283,10 +298,18 @@ router.post('/orders', async (req, res) => {
   const deliveryCharge = 20;
   const grandTotal = (totalAmount || 0) + deliveryCharge;
 
+  const mappedItems = (items || []).map(item => ({
+    medicineId: item.medicineId || item._id || 'm_unknown',
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    image: item.image || ''
+  }));
+
   const newOrderObj = {
     orderNumber: 'MED-' + Math.floor(100000 + Math.random() * 900000),
     userId: userId || null,
-    items: items,
+    items: mappedItems,
     totalAmount: totalAmount || 0,
     deliveryCharge: deliveryCharge,
     grandTotal: grandTotal,
@@ -305,7 +328,7 @@ router.post('/orders', async (req, res) => {
       return res.status(201).json({ success: true, message: 'Order placed successfully', data: newOrder });
     }
   } catch (err) {
-    console.error(err);
+    console.error('Order Save Error:', err);
   }
 
   // Fallback
@@ -317,18 +340,26 @@ router.post('/orders', async (req, res) => {
 // Admin/Staff: Confirm Order
 router.put('/orders/:id/confirm', async (req, res) => {
   const { confirmedBy } = req.body;
+  const mongoose = require('mongoose');
+  
   try {
     if (Order.db && Order.db.readyState === 1) {
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
       order.status = 'Confirmed';
       order.statusStep = 2;
-      order.confirmedBy = confirmedBy;
+      
+      if (mongoose.Types.ObjectId.isValid(confirmedBy)) {
+        order.confirmedBy = confirmedBy;
+      } else {
+        order.confirmedBy = null;
+      }
+      
       await order.save();
       return res.json({ success: true, message: 'Order confirmed successfully', data: order });
     }
   } catch (err) {
-    console.error(err);
+    console.error('Confirm Order Error:', err);
   }
   
   // Fallback
@@ -344,16 +375,24 @@ router.put('/orders/:id/confirm', async (req, res) => {
 // Admin: Assign Order to Staff
 router.put('/orders/:id/assign', async (req, res) => {
   const { staffId } = req.body;
+  const mongoose = require('mongoose');
+  
   try {
     if (Order.db && Order.db.readyState === 1) {
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-      order.assignedTo = staffId;
+      
+      if (mongoose.Types.ObjectId.isValid(staffId)) {
+        order.assignedTo = staffId;
+      } else {
+        order.assignedTo = null; // Don't crash on invalid ObjectId
+      }
+      
       await order.save();
       return res.json({ success: true, message: 'Order assigned to staff successfully', data: order });
     }
   } catch (err) {
-    console.error(err);
+    console.error('Assign Order Error:', err);
   }
 
   // Fallback
@@ -426,17 +465,23 @@ router.get('/admin/sales-analytics', async (req, res) => {
 
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+      
+      // Calculate start of week without mutating now object
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
       orders.forEach(o => {
-        const oDate = new Date(o.createdAt);
+        const oDate = o.createdAt ? new Date(o.createdAt) : new Date();
+        const oTotal = o.grandTotal || 0;
         if (o.status === 'Delivered') {
           deliveredOrders++;
-          totalRevenue += o.grandTotal;
-          if (oDate >= startOfToday) todayRevenue += o.grandTotal;
-          if (oDate >= startOfWeek) weeklyRevenue += o.grandTotal;
-          if (oDate >= startOfMonth) monthlyRevenue += o.grandTotal;
+          totalRevenue += oTotal;
+          if (oDate >= startOfToday) todayRevenue += oTotal;
+          if (oDate >= startOfWeek) weeklyRevenue += oTotal;
+          if (oDate >= startOfMonth) monthlyRevenue += oTotal;
         } else if (o.status === 'Cancelled') {
           cancelledOrders++;
         } else {
@@ -446,11 +491,16 @@ router.get('/admin/sales-analytics', async (req, res) => {
 
       // Calculate Staff Performance
       const staffStats = staffList.map(staff => {
-        const staffOrders = orders.filter(o => o.assignedTo && o.assignedTo._id.toString() === staff._id.toString());
+        const staffOrders = orders.filter(o => {
+          if (!o.assignedTo) return false;
+          // assignedTo could be populated as object, or be a raw ObjectId
+          const assignedIdStr = o.assignedTo._id ? o.assignedTo._id.toString() : o.assignedTo.toString();
+          return assignedIdStr === staff._id.toString();
+        });
         const delivered = staffOrders.filter(o => o.status === 'Delivered');
         const pending = staffOrders.filter(o => !['Delivered', 'Cancelled'].includes(o.status));
         const cancelled = staffOrders.filter(o => o.status === 'Cancelled');
-        const sales = delivered.reduce((sum, o) => sum + o.grandTotal, 0);
+        const sales = delivered.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
 
         return {
           _id: staff._id,
@@ -661,13 +711,12 @@ router.post('/auth/forgot-password', async (req, res) => {
 // Admin: Search Users by Phone
 router.get('/admin/users/search', async (req, res) => {
   const { phone } = req.query;
-  if (!phone) {
-    return res.status(400).json({ success: false, message: 'Phone search query is required' });
-  }
+  const searchQuery = phone ? phone.trim() : '';
 
   try {
     if (User.db && User.db.readyState === 1) {
-      const users = await User.find({ phone: { $regex: phone, $options: 'i' } }).select('-password');
+      const query = searchQuery ? { phone: { $regex: searchQuery, $options: 'i' } } : {};
+      const users = await User.find(query).select('-password');
       return res.json({ success: true, data: users });
     }
   } catch (err) {
@@ -675,10 +724,11 @@ router.get('/admin/users/search', async (req, res) => {
   }
 
   // Fallback
-  const matches = inMemUsers
-    .filter(u => u.phone.includes(phone))
-    .map(u => ({ _id: u._id, phone: u.phone, name: u.name, role: u.role }));
-  res.json({ success: true, data: matches });
+  const matches = searchQuery
+    ? inMemUsers.filter(u => u.phone.includes(searchQuery))
+    : inMemUsers;
+  const result = matches.map(u => ({ _id: u._id, phone: u.phone, name: u.name, role: u.role }));
+  res.json({ success: true, data: result });
 });
 
 // Admin: Update User Role
