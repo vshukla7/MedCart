@@ -86,12 +86,26 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
     setLoading(true);
     try {
       const allOrders = await fetchOrders({ role: 'admin' });
-      const sorted = (allOrders || []).sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-        return dateB - dateA;
-      });
-      setOrders(sorted);
+      if (allOrders) {
+        setOrders(prev => {
+          const map = new Map();
+          // Server/incoming orders take precedence
+          allOrders.forEach(o => {
+            if (o && o._id) map.set(o._id, o);
+          });
+          // Merge previous local orders that are not in the fetched list
+          prev.forEach(o => {
+            if (o && o._id && !map.has(o._id)) {
+              map.set(o._id, o);
+            }
+          });
+          return Array.from(map.values()).sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+            return dateB - dateA;
+          });
+        });
+      }
 
       // Get all staff members
       const matchedStaff = await searchUsersByPhone('');

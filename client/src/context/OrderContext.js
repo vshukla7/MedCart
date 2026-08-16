@@ -9,10 +9,34 @@ export const OrderProvider = ({ children }) => {
 
   const loadUserOrders = async (userId, role = 'user') => {
     if (!userId) return;
-    const history = await fetchOrders({ role, userId });
-    setOrders(history || []);
-    if (history && history.length > 0) {
-      setActiveOrder(history[0]);
+    try {
+      const history = await fetchOrders({ role, userId });
+      if (history) {
+        setOrders(prev => {
+          const map = new Map();
+          // Server/incoming orders take precedence
+          history.forEach(o => {
+            if (o && o._id) map.set(o._id, o);
+          });
+          // Merge local orders that are not in the fetched history
+          prev.forEach(o => {
+            if (o && o._id && !map.has(o._id)) {
+              map.set(o._id, o);
+            }
+          });
+          const merged = Array.from(map.values()).sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+            return dateB - dateA;
+          });
+          if (merged.length > 0) {
+            setActiveOrder(merged[0]);
+          }
+          return merged;
+        });
+      }
+    } catch (e) {
+      console.error('Error loading user orders:', e);
     }
   };
 
