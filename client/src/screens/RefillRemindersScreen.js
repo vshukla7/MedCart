@@ -5,6 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
+import { fetchReminders, createReminder, toggleReminderStatus, deleteReminder } from '../services/api';
+
 // Only set up notifications in standalone/dev-client builds.
 // expo-notifications push support was removed from Expo Go in SDK 53.
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
@@ -55,9 +57,10 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
     const { hours, minutes } = parseTime(timeStr);
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `💊 Medicine Reminder: ${name}`,
-        body: `Dosage: ${dosage}. It's time to take your medicine!`,
-        sound: true,
+        title: `💊 Time for your Medicine!`,
+        body: `${name} (${dosage})`,
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes?.DAILY ?? 'daily',
@@ -65,7 +68,7 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
         minute: minutes,
       },
     });
-    console.log(`Scheduled notification ${id} at ${hours}:${minutes}`);
+    console.log(`Scheduled notification ${id} for ${hours}:${minutes}`);
     return id;
   } catch (e) {
     console.error('Error scheduling notification', e);
@@ -74,7 +77,7 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
 };
 
 const cancelReminderNotification = async (notifId) => {
-  if (!notifId) return;
+  if (isExpoGo || !notifId) return;
   try {
     await Notifications.cancelScheduledNotificationAsync(notifId);
     console.log(`Cancelled notification ${notifId}`);
@@ -91,22 +94,24 @@ export const RefillRemindersScreen = ({ visible, onClose }) => {
   const [newDosage, setNewDosage] = useState('');
   const [newTime, setNewTime] = useState('09:00 AM');
 
+  const loadRemindersData = async () => {
+    const data = await fetchReminders();
+    const mapped = (data || []).map(r => ({
+      id: r._id,
+      name: r.medicineName,
+      dosage: r.dosage,
+      time: r.time,
+      active: r.isActive,
+      notificationId: r.notificationId || null
+    }));
+    setReminders(mapped);
+  };
+
   useEffect(() => {
-    // Schedule default reminders on mount if active
-    const setupReminders = async () => {
-      const updated = await Promise.all(
-        reminders.map(async (r) => {
-          if (r.active && !r.notificationId) {
-            const nId = await scheduleReminderNotification(r.name, r.dosage, r.time);
-            return { ...r, notificationId: nId };
-          }
-          return r;
-        })
-      );
-      setReminders(updated);
-    };
-    setupReminders();
-  }, []);
+    if (visible) {
+      loadRemindersData();
+    }
+  }, [visible]);
 
   const toggleReminder = async (id) => {
     const target = reminders.find(r => r.id === id);
@@ -124,7 +129,18 @@ export const RefillRemindersScreen = ({ visible, onClose }) => {
       }
     }
 
+    // Call API toggle
+    await toggleReminderStatus(id);
+
     setReminders(prev => prev.map(r => r.id === id ? { ...r, active: newActive, notificationId: notifId } : r));
+  };
+
+  const handleDeleteReminder = async (id, notifId) => {
+    if (notifId) {
+      await cancelReminderNotification(notifId);
+    }
+    await deleteReminder(id);
+    setReminders(prev => prev.filter(r => r.id !== id));
   };
 
   const handleAddReminder = async () => {
@@ -132,17 +148,29 @@ export const RefillRemindersScreen = ({ visible, onClose }) => {
     const finalDosage = newDosage || '1 Tablet daily';
     const nId = await scheduleReminderNotification(newMedName, finalDosage, newTime);
 
+    // Call API create
+    const payload = {
+      medicineName: newMedName,
+      dosage: finalDosage,
+      time: newTime,
+      isActive: true,
+      notificationId: nId
+    };
+    
+    const created = await createReminder(payload);
+    
     setReminders(prev => [
-      ...prev,
       {
-        id: Date.now().toString(),
-        name: newMedName,
-        dosage: finalDosage,
-        time: newTime,
-        active: true,
-        notificationId: nId
-      }
+        id: created._id,
+        name: created.medicineName,
+        dosage: created.dosage,
+        time: created.time,
+        active: created.isActive,
+        notificationId: created.notificationId || nId
+      },
+      ...prev
     ]);
+    
     setNewMedName('');
     setNewDosage('');
     setShowAddModal(false);
@@ -179,12 +207,21 @@ export const RefillRemindersScreen = ({ visible, onClose }) => {
                 </View>
               </View>
 
-              <Switch
-                value={rem.active}
-                onValueChange={() => toggleReminder(rem.id)}
-                trackColor={{ false: '#CBD5E1', true: '#22C55E' }}
-                thumbColor="#FFFFFF"
-              />
+              <View style={styles.cardRight}>
+                <Switch
+                  value={rem.active}
+                  onValueChange={() => toggleReminder(rem.id)}
+                  trackColor={{ false: '#CBD5E1', true: '#22C55E' }}
+                  thumbColor="#FFFFFF"
+                />
+                <TouchableOpacity 
+                  onPress={() => handleDeleteReminder(rem.id, rem.notificationId)}
+                  style={styles.deleteBtn}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </ScrollView>
@@ -391,5 +428,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800'
+  },
+  cardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14
+  },
+  deleteBtn: {
+    padding: 6
   }
 });

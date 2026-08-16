@@ -489,3 +489,77 @@ export const updateUserProfile = async (userId, payload) => {
     return { success: true, message: 'Profile updated successfully (offline mode)', data: payload };
   }
 };
+
+let clientInMemReminders = [
+  { _id: 'rem_1', medicineName: 'Paracetamol 650mg', dosage: '1 Tablet after meal', time: '09:00 AM', isActive: true },
+  { _id: 'rem_2', medicineName: 'Glucophage 500mg', dosage: '1 Tablet twice daily', time: '08:30 PM', isActive: true }
+];
+
+export const fetchReminders = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reminders`);
+    const json = await res.json();
+    if (json.success && json.data) return json.data;
+  } catch (e) {
+    console.log('[API Offline] Returning mock reminders');
+  }
+  return clientInMemReminders;
+};
+
+export const createReminder = async (remPayload) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reminders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(remPayload)
+    });
+    const json = await res.json();
+    if (json.success && json.data) {
+      clientInMemReminders.unshift(json.data);
+      return json.data;
+    }
+  } catch (e) {
+    console.log('[API Offline] Created offline reminder');
+  }
+
+  const fallback = { _id: 'rem_' + Date.now(), ...remPayload };
+  clientInMemReminders.unshift(fallback);
+  return fallback;
+};
+
+export const toggleReminderStatus = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reminders/${id}/toggle`, { method: 'PUT' });
+    const json = await res.json();
+    if (json.success && json.data) {
+      const idx = clientInMemReminders.findIndex(r => r._id === id);
+      if (idx > -1) clientInMemReminders[idx] = json.data;
+      return json.data;
+    }
+  } catch (e) {
+    console.log('[API Offline] Toggled offline reminder');
+  }
+
+  const idx = clientInMemReminders.findIndex(r => r._id === id);
+  if (idx > -1) {
+    clientInMemReminders[idx].isActive = !clientInMemReminders[idx].isActive;
+    return clientInMemReminders[idx];
+  }
+  return null;
+};
+
+export const deleteReminder = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/reminders/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.success) {
+      clientInMemReminders = clientInMemReminders.filter(r => r._id !== id);
+      return true;
+    }
+  } catch (e) {
+    console.log('[API Offline] Deleted offline reminder');
+  }
+
+  clientInMemReminders = clientInMemReminders.filter(r => r._id !== id);
+  return true;
+};

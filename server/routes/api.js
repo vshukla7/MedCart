@@ -552,10 +552,72 @@ router.get('/reminders', async (req, res) => {
   try {
     if (Reminder.db && Reminder.db.readyState === 1) {
       const reminders = await Reminder.find({}).sort({ createdAt: -1 });
-      if (reminders && reminders.length > 0) return res.json({ success: true, data: reminders });
+      return res.json({ success: true, data: reminders });
     }
   } catch (err) {}
   res.json({ success: true, data: inMemReminders });
+});
+
+router.post('/reminders', async (req, res) => {
+  const { medicineName, dosage, time, isActive, frequency } = req.body;
+  const newRemObj = {
+    medicineName,
+    dosage: dosage || '1 Tablet daily',
+    time,
+    isActive: isActive !== undefined ? isActive : true,
+    frequency: frequency || 'Daily'
+  };
+
+  try {
+    if (Reminder.db && Reminder.db.readyState === 1) {
+      const newRem = new Reminder(newRemObj);
+      await newRem.save();
+      return res.status(201).json({ success: true, data: newRem });
+    }
+  } catch (err) {
+    console.error('Create Reminder Error:', err);
+  }
+
+  // Fallback
+  const fallbackRem = { _id: 'rem_' + Date.now(), ...newRemObj };
+  inMemReminders.unshift(fallbackRem);
+  res.status(201).json({ success: true, data: fallbackRem });
+});
+
+router.put('/reminders/:id/toggle', async (req, res) => {
+  try {
+    if (Reminder.db && Reminder.db.readyState === 1) {
+      const rem = await Reminder.findById(req.params.id);
+      if (!rem) return res.status(404).json({ success: false, message: 'Reminder not found' });
+      rem.isActive = !rem.isActive;
+      await rem.save();
+      return res.json({ success: true, data: rem });
+    }
+  } catch (err) {
+    console.error('Toggle Reminder Error:', err);
+  }
+
+  // Fallback
+  const rem = inMemReminders.find(r => r._id === req.params.id);
+  if (rem) {
+    rem.isActive = !rem.isActive;
+  }
+  res.json({ success: true, data: rem });
+});
+
+router.delete('/reminders/:id', async (req, res) => {
+  try {
+    if (Reminder.db && Reminder.db.readyState === 1) {
+      await Reminder.findByIdAndDelete(req.params.id);
+      return res.json({ success: true, message: 'Reminder deleted' });
+    }
+  } catch (err) {
+    console.error('Delete Reminder Error:', err);
+  }
+
+  // Fallback
+  inMemReminders = inMemReminders.filter(r => r._id !== req.params.id);
+  res.json({ success: true, message: 'Reminder deleted' });
 });
 
 // Chat API
