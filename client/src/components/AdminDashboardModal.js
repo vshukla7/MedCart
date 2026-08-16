@@ -104,10 +104,18 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
 
   useEffect(() => {
     if (visible) {
+      // Always reload dispatch data when modal opens
+      loadDispatchData();
+      if (activeTab === 'analytics') loadAnalyticsData();
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible) {
       if (activeTab === 'dispatch') loadDispatchData();
       if (activeTab === 'analytics') loadAnalyticsData();
     }
-  }, [visible, activeTab]);
+  }, [activeTab]);
 
   const handleConfirm = async (orderId) => {
     try {
@@ -218,7 +226,17 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
           {/* Dispatch Tab */}
           {activeTab === 'dispatch' && (
             <View style={styles.tabSection}>
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Order Confirmations & Assignments</Text>
+              <View style={styles.sectionHeadingRow}>
+                <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>Order Confirmations & Assignments</Text>
+                <TouchableOpacity
+                  style={styles.refreshBtn}
+                  onPress={loadDispatchData}
+                  disabled={loading}
+                >
+                  <Feather name="refresh-cw" size={14} color="#22C55E" />
+                  <Text style={styles.refreshBtnText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
               {orders.map(ord => (
                 <View key={ord._id} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
                   <View style={styles.cardHeader}>
@@ -724,6 +742,25 @@ const styles = StyleSheet.create({
   sendNotifyBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
+    fontWeight: '800'
+  },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7'
+  },
+  refreshBtnText: {
+    color: '#16A34A',
+    fontSize: 12,
     fontWeight: '800'
   }
 });
