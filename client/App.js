@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, StatusBar, Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { CartProvider, useCart } from './src/context/CartContext';
 import { OrderProvider } from './src/context/OrderContext';
@@ -132,6 +133,7 @@ function MainApp() {
         currentUser={currentUser}
         onClose={() => setShowCheckout(false)}
         onSuccessOrder={handleSuccessOrder}
+        onUpdateUser={setCurrentUser}
       />
 
       {/* Refill Reminders Screen */}
@@ -165,13 +167,15 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <CartProvider>
-        <OrderProvider>
-          <MainApp />
-        </OrderProvider>
-      </CartProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <CartProvider>
+          <OrderProvider>
+            <MainApp />
+          </OrderProvider>
+        </CartProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

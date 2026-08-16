@@ -3,26 +3,33 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Te
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
+// Only set up notifications in standalone/dev-client builds.
+// expo-notifications push support was removed from Expo Go in SDK 53.
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
-  // Android: Create a notification channel
-  if (Notifications.setNotificationChannelAsync) {
-    Notifications.setNotificationChannelAsync('medcart-reminders', {
-      name: 'Medicine Reminders',
-      importance: Notifications.AndroidImportance?.MAX ?? 5,
-      sound: 'default',
-    }).catch(() => {});
+if (!isExpoGo) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+
+    // Android: Create a notification channel
+    if (Notifications.setNotificationChannelAsync) {
+      Notifications.setNotificationChannelAsync('medcart-reminders', {
+        name: 'Medicine Reminders',
+        importance: Notifications.AndroidImportance?.MAX ?? 5,
+        sound: 'default',
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.log('Notification handler setup skipped:', e.message);
   }
-} catch (e) {
-  console.log('Notification handler setup skipped:', e.message);
 }
 
 const parseTime = (timeStr) => {
@@ -37,6 +44,8 @@ const parseTime = (timeStr) => {
 };
 
 const scheduleReminderNotification = async (name, dosage, timeStr) => {
+  // Scheduled notifications only work in standalone/dev-client builds
+  if (isExpoGo) return null;
   try {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
@@ -54,7 +63,6 @@ const scheduleReminderNotification = async (name, dosage, timeStr) => {
         type: Notifications.SchedulableTriggerInputTypes?.DAILY ?? 'daily',
         hour: hours,
         minute: minutes,
-        repeats: true,
       },
     });
     console.log(`Scheduled notification ${id} at ${hours}:${minutes}`);
