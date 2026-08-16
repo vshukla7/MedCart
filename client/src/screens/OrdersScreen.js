@@ -128,7 +128,10 @@ export const OrdersScreen = ({ currentUser }) => {
 
               <View style={styles.paymentInfo}>
                 <Text style={[styles.payMethodText, { color: theme.textSecondary }]}>{ord.paymentMethod}</Text>
-                <Text style={[styles.payStatusText, { color: ord.status === 'Cancelled' ? '#EF4444' : '#EF4444' }]}>
+                <Text style={[
+                  styles.payStatusText, 
+                  { color: ord.status === 'Cancelled' ? '#EF4444' : (ord.isPaid ? '#16A34A' : '#F59E0B') }
+                ]}>
                   {ord.status === 'Cancelled' ? 'Cancelled' : (ord.isPaid ? 'Paid' : 'Cash Pending')}
                 </Text>
               </View>

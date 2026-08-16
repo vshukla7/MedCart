@@ -21,7 +21,7 @@ app.get('/health', (req, res) => {
 app.use('/api', apiRoutes);
 
 // Connect DB then start
-const init = connectDB().then(() => seedData()).catch(console.error);
+const init = connectDB().catch(console.error);
 
 // For local dev: start HTTP server
 if (process.env.NODE_ENV !== 'production') {

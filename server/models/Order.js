@@ -10,9 +10,9 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  userId: { type: String, ref: 'User' },
+  assignedTo: { type: String, ref: 'User' },
+  confirmedBy: { type: String, ref: 'User' },
   items: [orderItemSchema],
   totalAmount: { type: Number, required: true },
   deliveryCharge: { type: Number, default: 20 },

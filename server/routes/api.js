@@ -236,24 +236,11 @@ router.get('/orders', async (req, res) => {
     if (Order.db && Order.db.readyState === 1) {
       let query = {};
       if (role === 'user' && userId) {
-        if (mongoose.Types.ObjectId.isValid(userId)) {
-          query.userId = userId;
-        } else {
-          // If query userId is invalid format (mock), match by string matching fallback or return empty
-          query.userId = null; 
-        }
+        query.userId = userId;
       } else if (role === 'staff' && userId) {
-        if (mongoose.Types.ObjectId.isValid(userId)) {
-          query.assignedTo = userId;
-        } else {
-          query.assignedTo = null;
-        }
+        query.assignedTo = userId;
       } else if (assignedTo) {
-        if (mongoose.Types.ObjectId.isValid(assignedTo)) {
-          query.assignedTo = assignedTo;
-        } else {
-          query.assignedTo = null;
-        }
+        query.assignedTo = assignedTo;
       }
       
       const orders = await Order.find(query)
@@ -348,12 +335,7 @@ router.put('/orders/:id/confirm', async (req, res) => {
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
       order.status = 'Confirmed';
       order.statusStep = 2;
-      
-      if (mongoose.Types.ObjectId.isValid(confirmedBy)) {
-        order.confirmedBy = confirmedBy;
-      } else {
-        order.confirmedBy = null;
-      }
+      order.confirmedBy = confirmedBy;
       
       await order.save();
       return res.json({ success: true, message: 'Order confirmed successfully', data: order });
@@ -382,11 +364,7 @@ router.put('/orders/:id/assign', async (req, res) => {
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
       
-      if (mongoose.Types.ObjectId.isValid(staffId)) {
-        order.assignedTo = staffId;
-      } else {
-        order.assignedTo = null; // Don't crash on invalid ObjectId
-      }
+      order.assignedTo = staffId;
       
       await order.save();
       return res.json({ success: true, message: 'Order assigned to staff successfully', data: order });
