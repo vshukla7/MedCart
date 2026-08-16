@@ -37,6 +37,9 @@ export const StaffDashboardModal = ({ visible, onClose, currentUser }) => {
 
     if (!nextStatus) return;
 
+    const prevOrders = [...orders];
+    const statusMap = { 'Confirmed': 3, 'Packed': 4, 'Out for Delivery': 5 };
+
     Alert.alert(
       'Update Status',
       `Move order to ${nextStatus.toUpperCase()}?`,
@@ -45,19 +48,20 @@ export const StaffDashboardModal = ({ visible, onClose, currentUser }) => {
         {
           text: 'Update',
           onPress: async () => {
-            setLoading(true);
+            // Optimistic update
+            setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: nextStatus, statusStep: statusMap[nextStatus] || o.statusStep } : o));
+            
             try {
               const res = await updateOrderStatus(orderId, nextStatus);
               if (res.success) {
-                Alert.alert('Success', `Status updated to ${nextStatus}`);
                 loadStaffData();
               } else {
+                setOrders(prevOrders);
                 Alert.alert('Error', 'Could not update status');
               }
             } catch (e) {
+              setOrders(prevOrders);
               Alert.alert('Error', 'Something went wrong');
-            } finally {
-              setLoading(false);
             }
           }
         }
@@ -66,6 +70,8 @@ export const StaffDashboardModal = ({ visible, onClose, currentUser }) => {
   };
 
   const handleCancelOrder = async (orderId) => {
+    const prevOrders = [...orders];
+    
     Alert.alert(
       'Cancel Delivery',
       'Are you sure you want to mark this delivery as Cancelled?',
@@ -75,19 +81,20 @@ export const StaffDashboardModal = ({ visible, onClose, currentUser }) => {
           text: 'Yes, Cancel',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
+            // Optimistic update
+            setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Cancelled', statusStep: 0 } : o));
+            
             try {
               const res = await updateOrderStatus(orderId, 'Cancelled');
               if (res.success) {
-                Alert.alert('Success', 'Order cancelled');
                 loadStaffData();
               } else {
+                setOrders(prevOrders);
                 Alert.alert('Error', 'Could not cancel order');
               }
             } catch (e) {
+              setOrders(prevOrders);
               Alert.alert('Error', 'Something went wrong');
-            } finally {
-              setLoading(false);
             }
           }
         }

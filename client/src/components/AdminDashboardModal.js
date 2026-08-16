@@ -132,29 +132,57 @@ export const AdminDashboardModal = ({ visible, onClose, currentUser }) => {
   }, [activeTab]);
 
   const handleConfirm = async (orderId) => {
+    const prevOrders = [...orders];
+    
+    // Optimistic UI Update: Mark status as Confirmed immediately
+    setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Confirmed', statusStep: 2 } : o));
+    
     try {
       const res = await confirmOrder(orderId, currentUser?._id);
       if (res.success) {
-        Alert.alert('Success', 'Order confirmed');
+        // Fetch fresh copy to ensure all fields are correct
         loadDispatchData();
       } else {
+        // Rollback
+        setOrders(prevOrders);
         Alert.alert('Error', 'Could not confirm order');
       }
     } catch (e) {
+      setOrders(prevOrders);
       Alert.alert('Error', 'Something went wrong');
     }
   };
 
   const handleAssign = async (orderId, staffId) => {
+    const prevOrders = [...orders];
+    const staffObj = staffList.find(s => s._id === staffId);
+    
+    // Optimistic UI Update: Assign staff and move status step forward if still Confirmed
+    setOrders(prev => prev.map(o => {
+      if (o._id === orderId) {
+        const nextStatus = o.status === 'Confirmed' ? 'Packed' : o.status;
+        const nextStep = o.status === 'Confirmed' ? 3 : o.statusStep;
+        return { 
+          ...o, 
+          assignedTo: staffObj || staffId, 
+          assignedStaff: staffId,
+          status: nextStatus,
+          statusStep: nextStep
+        };
+      }
+      return o;
+    }));
+    
     try {
       const res = await assignOrder(orderId, staffId);
       if (res.success) {
-        Alert.alert('Success', 'Order assigned successfully');
         loadDispatchData();
       } else {
+        setOrders(prevOrders);
         Alert.alert('Error', 'Could not assign order');
       }
     } catch (e) {
+      setOrders(prevOrders);
       Alert.alert('Error', 'Something went wrong');
     }
   };
