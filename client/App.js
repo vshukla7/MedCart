@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, StatusBar, Platform, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { CartProvider, useCart } from './src/context/CartContext';
@@ -17,6 +17,53 @@ import { RefillRemindersScreen } from './src/screens/RefillRemindersScreen';
 import { PharmacistChatScreen } from './src/screens/PharmacistChatScreen';
 import { AdminDashboardModal } from './src/components/AdminDashboardModal';
 import { StaffDashboardModal } from './src/components/StaffDashboardModal';
+
+// ─── Error Boundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('[MedCart ErrorBoundary]', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={ebStyles.container}>
+          <Text style={ebStyles.emoji}>💊</Text>
+          <Text style={ebStyles.title}>MedCart ran into a problem</Text>
+          <Text style={ebStyles.message}>
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </Text>
+          <TouchableOpacity
+            style={ebStyles.btn}
+            onPress={() => this.setState({ hasError: false, error: null })}
+          >
+            <Text style={ebStyles.btnText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ebStyles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#F0FFF4' },
+  emoji: { fontSize: 48, marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: '800', color: '#14532D', textAlign: 'center', marginBottom: 10 },
+  message: { fontSize: 13, color: '#166534', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  btn: { backgroundColor: '#22C55E', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14 },
+  btnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 function MainApp() {
   const { theme, isDarkMode } = useTheme();
@@ -167,15 +214,17 @@ function MainApp() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <CartProvider>
-          <OrderProvider>
-            <MainApp />
-          </OrderProvider>
-        </CartProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <CartProvider>
+            <OrderProvider>
+              <MainApp />
+            </OrderProvider>
+          </CartProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 
