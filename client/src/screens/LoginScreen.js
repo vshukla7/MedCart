@@ -110,7 +110,7 @@ export const LoginScreen = ({ onLoginSuccess }) => {
   return (
     <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.background }]} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
+        <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
         <Text style={[styles.title, { color: theme.textPrimary }]}>MedCart Pharmacy</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           {mode === 'login' && 'Log in with your phone and password'}
