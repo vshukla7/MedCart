@@ -38,7 +38,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/logo.jpeg",
+          "icon": "./assets/logo.png",
           "color": "#ffffff",
           "defaultChannel": "medcart-reminders"
         }
